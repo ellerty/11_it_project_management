@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="100" height="100" viewBox="0 0 100 100">
+  <g fill="none" fill-rule="evenodd">
+    <rect width="70" height="90" x="15" y="5" fill="#FFFFFF" rx="3"/>
+    <rect width="60" height="4" x="20" y="14" fill="#4a8a64" rx="2"/>
+    <rect width="40" height="4" x="20" y="22" fill="#a5e5bc" rx="2"/>
+    <circle cx="30" cy="37" r="10" fill="#4a8a64"/>
+    <path fill="#FFFFFF" d="M30,32 C31.65,32 33,33.35 33,35 C33,36.65 31.65,38 30,38 C28.35,38 27,36.65 27,35 C27,33.35 28.35,32 30,32 Z M30,39 C32.33,39 37,40.17 37,42.5 L37,44 L23,44 L23,42.5 C23,40.17 27.67,39 30,39 Z"/>
+    <rect width="30" height="4" x="45" y="32" fill="#a5e5bc" rx="2"/>
+    <rect width="30" height="4" x="45" y="40" fill="#a5e5bc" rx="2"/>
+    <rect width="55" height="4" x="20" y="52" fill="#4a8a64" rx="2"/>
+    <rect width="55" height="4" x="20" y="60" fill="#a5e5bc" rx="2"/>
+    <rect width="55" height="4" x="20" y="68" fill="#a5e5bc" rx="2"/>
+    <rect width="25" height="4" x="20" y="82" fill="#4a8a64" rx="2"/>
+    <rect width="25" height="4" x="50" y="82" fill="#4a8a64" rx="2"/>
+  </g>
+</svg> 
