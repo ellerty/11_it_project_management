@@ -1,0 +1,19 @@
+# 基础依赖
+asgiref==3.8.1
+Django==4.2.20
+django-cors-headers==4.7.0
+djangorestframework==3.16.0
+Pillow==11.2.1
+python-dotenv==0.21.1
+sqlparse==0.5.3
+typing-extensions==4.13.2
+tzdata==2025.2
+
+# 开发依赖
+pytest==7.3.1
+flake8==6.0.0
+pytest-django==4.5.2
+
+# 生产依赖
+gunicorn==20.1.0
+whitenoise==6.4.0

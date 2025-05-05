@@ -1070,13 +1070,9 @@ const saveSkills = async () => {
 // 统一的资料更新函数
 const updateProfile = async (profileData) => {
   try {
-    // 实际项目中，使用API调用更新数据库
-    // 例如: const response = await userService.updateProfile(profileData);
-    
     // 使用authStore更新当前用户资料
-    if (profileData.username || profileData.email || profileData.avatar) {
-      await authStore.updateProfile(profileData);
-    }
+    // 无论是什么类型的资料更新，都通过authStore发送到后端
+    await authStore.updateProfile(profileData);
     
     console.log('资料已更新:', profileData);
     return true;
@@ -2469,4 +2465,4 @@ const submitVerification = async () => {
   color: var(--text-light);
   margin-top: 0.5rem;
 }
-</style> 
+</style>

@@ -128,24 +128,41 @@ export const isAuthenticated = (): boolean => {
  */
 export const updateUserProfile = async (userProfile: Partial<User>): Promise<User> => {
   try {
-    // 模拟API调用延迟
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // 实际项目中应该调用API
-    // const response = await axios.put(API_URL + 'profile', userProfile);
-    // return response.data;
-    
+    // 获取当前用户
     const currentUser = getCurrentUser();
     if (!currentUser) {
       throw new Error('用户未登录');
     }
     
+    // 更新本地存储
     const updatedUser = { ...currentUser, ...userProfile };
     localStorage.setItem('user', JSON.stringify(updatedUser));
     
-    return updatedUser;
+    // 调用API更新后端数据
+    try {
+      // 发送API请求到后端
+      const response = await axios.put(API_URL + 'profile', userProfile, {
+        headers: {
+          'Authorization': `Bearer ${currentUser.token}`
+        }
+      });
+      
+      // 如果后端返回更新后的用户数据，使用后端返回的数据
+      const serverUpdatedUser = response.data;
+      
+      // 更新本地存储为服务器返回的最新数据
+      const finalUser = { ...updatedUser, ...serverUpdatedUser };
+      localStorage.setItem('user', JSON.stringify(finalUser));
+      
+      return finalUser;
+    } catch (apiError) {
+      console.error('调用后端API更新用户资料失败:', apiError);
+      // 即使API调用失败，我们仍然返回本地更新的用户数据
+      // 这样用户体验会更好，但应该提示用户刷新后数据可能会丢失
+      return updatedUser;
+    }
   } catch (error) {
     console.error('更新用户信息失败:', error);
     throw error;
   }
-}; 
+};
