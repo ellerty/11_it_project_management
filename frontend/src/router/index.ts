@@ -59,6 +59,13 @@ const routes: Array<RouteRecordRaw> = [
     meta: { title: '我的简历 - 智慧零工', requiresAuth: true }
   },
   {
+    path: '/evaluation',
+    name: 'Evaluation',
+    // @ts-ignore
+    component: () => import('../modules/user_management/views/EvaluationView.vue'),
+    meta: { title: '个人评价 - 智慧零工', requiresAuth: true }
+  },
+  {
     path: '/notifications',
     name: 'Notifications',
     // @ts-ignore

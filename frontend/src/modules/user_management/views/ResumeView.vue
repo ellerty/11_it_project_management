@@ -37,6 +37,13 @@
         </div>
       </div>
       
+      <!-- 个人评价部分 -->
+      <PersonalEvaluation 
+        title="个人评价" 
+        :initial-value="resume.evaluation" 
+        @save="handleEvaluationSave"
+      />
+      
       <!-- 工作经历部分 -->
       <div class="resume-section">
         <h2 class="section-title">工作经历</h2>
@@ -205,6 +212,7 @@
 <script setup>
 import { ref, reactive } from 'vue';
 import BaseLayout from '../../../components/BaseLayout.vue';
+import PersonalEvaluation from '../components/PersonalEvaluation.vue';
 
 const isSaving = ref(false);
 
@@ -214,9 +222,15 @@ const resume = reactive({
     phone: '',
     email: ''
   },
+  evaluation: '',
   experiences: [],
   educations: []
 });
+
+const handleEvaluationSave = (content) => {
+  resume.evaluation = content;
+  console.log('个人评价已更新:', content);
+};
 
 const addExperience = () => {
   resume.experiences.push({

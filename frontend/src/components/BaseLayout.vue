@@ -54,6 +54,9 @@
                 <li class="menu-item" @click.stop="navigateToResume">
                   <i class="menu-icon">📋</i> 我的简历
                 </li>
+                <li class="menu-item" @click.stop="navigateToEvaluation">
+                  <i class="menu-icon">⭐</i> 收到的评价
+                </li>
                 <li class="menu-item" @click.stop="navigateToNotifications">
                   <i class="menu-icon">📬</i> 消息通知
                 </li>
@@ -183,6 +186,12 @@ const navigateToProfile = () => {
 const navigateToResume = () => {
   showUserMenu.value = false;
   router.push('/resume');
+};
+
+// 导航到个人评价页面
+const navigateToEvaluation = () => {
+  showUserMenu.value = false;
+  router.push('/evaluation');
 };
 
 // 导航到通知页面
