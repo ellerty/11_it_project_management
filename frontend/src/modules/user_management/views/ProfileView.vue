@@ -797,7 +797,8 @@
 import { ref, reactive, computed, onMounted } from 'vue';
 import BaseLayout from '../../../components/BaseLayout.vue';
 import { authStore } from '../../../store/authStore';
-import { updateUserProfile } from '../../../services/authService';
+import { updateUserProfile, getUserProfile } from '../../../services/authService';
+import avatarService from '../../../services/avatarService';
 
 // 用户模式 - 'freelancer'(零工用户) 或 'employer'(招聘用户)
 const userMode = ref('freelancer');
@@ -936,31 +937,33 @@ const isVerifyFormValid = computed(() => {
          verifyForm.idBack;
 });
 
-// 在组件挂载时加载用户资料
-onMounted(() => {
-  // 如果用户已登录，用当前用户信息初始化资料
-  if (currentUser.value) {
-    userProfile.username = currentUser.value.username || '';
-    userProfile.email = currentUser.value.email || '';
-    userProfile.avatar = currentUser.value.avatar || null;
-  }
-  
-  // 在实际项目中，这里会调用API获取完整的用户资料
-  // 示例: loadUserProfile();
-  
-  // 模拟从API加载的数据 - 实际项目中删除这部分
-  if (userProfile.username && !userProfile.bio) {
-    // 只有在用户名存在但其他资料为空时才加载示例数据
-    // 这样实现了"初始注册的用户资料为空"的效果
-    loadSampleData();
+// 替换原有的 onMounted 部分
+onMounted(async () => {
+  try {
+    // 从 authStore 获取当前用户信息
+    const user = authStore.state.user;
+    
+    if (user) {
+      // 如果用户已登录，尝试从 authService 获取完整资料
+      try {
+        const profileData = await getUserProfile();
+        
+        // 合并基础用户信息和完整资料
+        Object.assign(userProfile, {
+          ...user,
+          ...profileData
+        });
+      } catch (error) {
+        console.error('获取完整资料失败，使用基本用户信息:', error);
+        // 如果获取完整资料失败，只使用基础用户信息
+        Object.assign(userProfile, user);
+      }
+    }
+  } catch (error) {
+    console.error('获取用户资料失败:', error);
+    // 可以在这里添加错误处理逻辑
   }
 });
-
-// 加载示例数据 - 实际项目中应替换为API调用
-const loadSampleData = () => {
-  // 如果不想加载任何示例数据，可以注释掉这个函数调用
-  // 或将此函数体留空
-};
 
 // 编辑基本信息相关函数
 const initEditBasicInfo = () => {
@@ -1205,16 +1208,25 @@ const confirmModeSwitch = () => {
 };
 
 // 头像上传处理
-const handleAvatarChange = (event) => {
+const handleAvatarChange = async (event) => {
   const file = event.target.files[0];
   if (!file) return;
   
-  // 实际项目中应该上传到服务器，这里只是模拟
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    userProfile.avatar = e.target.result;
-  };
-  reader.readAsDataURL(file);
+  try {
+    console.log('开始上传头像:', file.name);
+    
+    // 使用avatarService上传头像文件
+    const result = await avatarService.uploadAvatar(file);
+    
+    // 更新本地头像URL和用户资料
+    userProfile.avatar = result.avatar;
+    
+    // 显示成功提示
+    alert('头像上传成功');
+  } catch (error) {
+    console.error('头像上传失败:', error);
+    alert('头像上传失败，请稍后重试');
+  }
 };
 
 // 查看证书相关
@@ -1470,7 +1482,7 @@ const uploadCompanyCertificate = async () => {
     alert('企业资质上传成功，等待审核');
   } catch (error) {
     console.error('上传企业资质失败:', error);
-    alert('上传失败，请稍后重试');
+    showError('上传失败：' + error.message);
   }
 };
 
@@ -1506,7 +1518,7 @@ const addExperience = async () => {
     showAddExperience.value = false;
     
     // 提示用户
-    alert('工作经历添加成功');
+    showSuccess('工作经历添加成功');
     
     // 在实际项目中，这里会调用API保存到数据库
     await updateProfile({
@@ -1514,7 +1526,7 @@ const addExperience = async () => {
     });
   } catch (error) {
     console.error('添加工作经历失败:', error);
-    alert('添加失败，请稍后重试');
+    showError('添加失败：' + error.message);
   }
 };
 

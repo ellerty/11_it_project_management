@@ -22,6 +22,7 @@ async function login(username: string, password: string) {
   state.error = null;
   
   try {
+    console.log('authStore.login 被调用', username);
     state.user = await apiLogin(username, password);
     return state.user;
   } catch (error) {

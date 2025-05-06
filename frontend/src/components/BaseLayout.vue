@@ -28,7 +28,7 @@
         
         <!-- 已登录状态显示用户信息和下拉菜单 -->
         <template v-else>
-          <div class="user-profile" @click="toggleUserMenu">
+          <div class="user-profile" @click.stop="toggleUserMenu">
             <div class="avatar-container">
               <img 
                 :src="currentUser?.avatar || '/avatars/default.jpg'" 
@@ -40,7 +40,7 @@
             <i class="dropdown-icon">▼</i>
             
             <!-- 用户菜单 -->
-            <div v-if="showUserMenu" class="user-menu">
+            <div v-show="showUserMenu" class="user-menu">
               <div class="menu-header">
                 <div class="menu-user-info">
                   <div>{{ currentUser?.username }}</div>
@@ -48,19 +48,19 @@
                 </div>
               </div>
               <ul class="menu-list">
-                <li class="menu-item" @click="navigateToProfile">
+                <li class="menu-item" @click.stop="navigateToProfile">
                   <i class="menu-icon">👤</i> 个人中心
                 </li>
-                <li class="menu-item">
+                <li class="menu-item" @click.stop="navigateToResume">
                   <i class="menu-icon">📋</i> 我的简历
                 </li>
-                <li class="menu-item">
+                <li class="menu-item" @click.stop="navigateToNotifications">
                   <i class="menu-icon">📬</i> 消息通知
                 </li>
                 <li class="menu-item">
                   <i class="menu-icon">⚙️</i> 账号设置
                 </li>
-                <li class="menu-item logout" @click="handleLogout">
+                <li class="menu-item logout" @click.stop="handleLogout">
                   <i class="menu-icon">🚪</i> 退出登录
                 </li>
               </ul>
@@ -153,20 +153,42 @@ const toggleUserMenu = () => {
 // 点击文档其他地方关闭菜单
 const closeUserMenu = (event) => {
   const userProfile = document.querySelector('.user-profile');
-  if (userProfile && !userProfile.contains(event.target)) {
+  // 确保点击的不是用户菜单本身
+  if (showUserMenu.value && userProfile && !userProfile.contains(event.target)) {
     showUserMenu.value = false;
   }
 };
 
 // 导航到登录页面
 const navigateToLogin = () => {
+  console.log('导航到登录页面');
   router.push('/login');
 };
 
 // 导航到个人中心页面
 const navigateToProfile = () => {
+  console.log('正在导航到个人中心...');
   showUserMenu.value = false;
-  router.push('/profile');
+  try {
+    router.push('/profile');
+    console.log('成功导航到/profile路由');
+  } catch (error) {
+    console.error('导航到个人中心时出错:', error);
+    // 尝试使用window.location作为备选方案
+    window.location.href = '/profile';
+  }
+};
+
+// 导航到简历页面
+const navigateToResume = () => {
+  showUserMenu.value = false;
+  router.push('/resume');
+};
+
+// 导航到通知页面
+const navigateToNotifications = () => {
+  showUserMenu.value = false;
+  router.push('/notifications');
 };
 
 // 回到首页
@@ -515,4 +537,4 @@ onMounted(() => {
     margin-bottom: 30px;
   }
 }
-</style> 
+</style>

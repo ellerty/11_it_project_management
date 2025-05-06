@@ -55,33 +55,33 @@
           </button>
         </div>
         
-        <div class="alternate-login">
-          <div class="divider">
-            <span>或</span>
-          </div>
-          
-          <div class="social-login">
-            <button class="social-login-button wechat">
-              <span>微信登录</span>
-            </button>
-            <button class="social-login-button phone">
-              <span>短信验证码登录</span>
-            </button>
-          </div>
+        <div class="register-link">
+          还没有账号? <a href="#" @click.prevent="goToRegister">立即注册</a>
         </div>
       </div>
       
-      <div class="register-link">
-        还没有账号? <a href="#" @click.prevent="goToRegister">立即注册</a>
+      <div class="login-options">
+        <p class="options-title">其他登录方式</p>
+        <div class="social-options">
+          <button class="option-btn wechat">
+            <span class="icon">微信</span>
+          </button>
+          <button class="option-btn qq">
+            <span class="icon">QQ</span>
+          </button>
+          <button class="option-btn weibo">
+            <span class="icon">微博</span>
+          </button>
+        </div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { authStore } from '../../../store/authStore';
+import * as authService from '../../../services/authService';
 
 // 获取router实例
 const router = useRouter();
@@ -90,44 +90,43 @@ const router = useRouter();
 const username = ref('');
 const password = ref('');
 const showPassword = ref(false);
+const isLoading = ref(false);
 const errorMessage = ref('');
 
-// 计算属性
-const isLoading = computed(() => authStore.state.loading);
-
-// 登录处理
+// 处理登录
 const handleLogin = async () => {
-  // 清除之前的错误信息
+  // 简单的表单验证
+  if (!username.value || !password.value) {
+    errorMessage.value = '请输入用户名和密码';
+    return;
+  }
+  
+  isLoading.value = true;
   errorMessage.value = '';
   
-  // 表单验证
-  if (!username.value) {
-    errorMessage.value = '请输入用户名或手机号';
-    return;
-  }
-  
-  if (!password.value) {
-    errorMessage.value = '请输入密码';
-    return;
-  }
-  
   try {
-    // 调用登录服务
-    await authStore.login(username.value, password.value);
+    console.log('正在提交登录:', {
+      username: username.value,
+      password: password.value
+    });
     
-    // 登录成功
-    console.log('登录成功');
+    // 直接调用authService的login方法
+    const userData = await authService.login(username.value, password.value);
     
-    // 登录成功后跳转到个人资料页面
+    console.log('登录成功，用户数据:', userData);
+    
+    // 登录成功后跳转到个人中心页面
     router.push('/profile');
   } catch (error) {
-    // 登录失败，显示错误信息
+    console.error('登录失败:', error);
+    
     if (error instanceof Error) {
       errorMessage.value = error.message;
     } else {
       errorMessage.value = '登录失败，请检查用户名和密码';
     }
-    console.error('登录失败:', error);
+  } finally {
+    isLoading.value = false;
   }
 };
 
@@ -137,8 +136,9 @@ const goToRegister = () => {
 };
 
 const goToForgotPassword = () => {
-  // 忘记密码页面暂未实现
-  console.log('跳转到忘记密码页');
+  console.log('前往忘记密码页面');
+  // 实际项目中的忘记密码页面跳转
+  // router.push('/forgot-password');
 };
 </script>
 
@@ -154,7 +154,7 @@ const goToForgotPassword = () => {
 
 .login-card {
   width: 100%;
-  max-width: 450px;
+  max-width: 420px;
   padding: 40px;
   background-color: white;
   border-radius: 8px;
@@ -223,13 +223,13 @@ const goToForgotPassword = () => {
 }
 
 .forgot-password {
-  margin-top: 8px;
   text-align: right;
+  margin-top: 8px;
 }
 
 .forgot-password a {
-  color: #2c6e49;
   font-size: 14px;
+  color: #2c6e49;
   text-decoration: none;
 }
 
@@ -246,77 +246,18 @@ const goToForgotPassword = () => {
   transition: background-color 0.3s;
 }
 
-.login-button:hover {
+.login-button:hover:not(:disabled) {
   background-color: #224f38;
 }
 
 .login-button:disabled {
-  background-color: #85b59b;
+  background-color: #a5a5a5;
   cursor: not-allowed;
 }
 
-.error-message {
-  color: #e74c3c;
-  font-size: 14px;
-  margin-bottom: 15px;
-  text-align: center;
-  padding: 8px;
-  background-color: rgba(231, 76, 60, 0.1);
-  border-radius: 4px;
-}
-
-.alternate-login {
-  margin: 30px 0;
-}
-
-.divider {
-  display: flex;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.divider::before,
-.divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background-color: #e0e0e0;
-}
-
-.divider span {
-  padding: 0 15px;
-  color: #666;
-  font-size: 14px;
-}
-
-.social-login {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 15px;
-}
-
-.social-login-button {
-  height: 44px;
-  border: 1px solid #e0e0e0;
-  border-radius: 4px;
-  background-color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.social-login-button.wechat {
-  color: #07C160;
-}
-
-.social-login-button.phone {
-  color: #1890ff;
-}
-
 .register-link {
-  margin-top: 20px;
   text-align: center;
+  margin-top: 20px;
   font-size: 14px;
   color: #666;
 }
@@ -327,13 +268,116 @@ const goToForgotPassword = () => {
   text-decoration: none;
 }
 
+.login-options {
+  margin-top: 40px;
+  text-align: center;
+}
+
+.options-title {
+  font-size: 14px;
+  color: #999;
+  margin-bottom: 15px;
+  position: relative;
+}
+
+.options-title::before,
+.options-title::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  width: 60px;
+  height: 1px;
+  background-color: #e0e0e0;
+}
+
+.options-title::before {
+  left: 40px;
+}
+
+.options-title::after {
+  right: 40px;
+}
+
+.social-options {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+}
+
+.option-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid #e0e0e0;
+  background-color: white;
+  cursor: pointer;
+  transition: all 0.3s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.option-btn:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.option-btn .icon {
+  font-size: 12px;
+  color: #666;
+}
+
+.wechat:hover {
+  background-color: #7fd379;
+  border-color: #7fd379;
+}
+
+.wechat:hover .icon {
+  color: white;
+}
+
+.qq:hover {
+  background-color: #12b7f5;
+  border-color: #12b7f5;
+}
+
+.qq:hover .icon {
+  color: white;
+}
+
+.weibo:hover {
+  background-color: #e6162d;
+  border-color: #e6162d;
+}
+
+.weibo:hover .icon {
+  color: white;
+}
+
+.error-message {
+  color: #ff4d4f;
+  font-size: 14px;
+  margin-bottom: 15px;
+  padding: 8px 12px;
+  background-color: rgba(255, 77, 79, 0.1);
+  border-radius: 4px;
+}
+
 @media (max-width: 480px) {
   .login-card {
     padding: 25px;
   }
   
-  .social-login {
-    grid-template-columns: 1fr;
+  .options-title::before,
+  .options-title::after {
+    width: 30px;
+  }
+  
+  .options-title::before {
+    left: 20px;
+  }
+  
+  .options-title::after {
+    right: 20px;
   }
 }
 </style> 

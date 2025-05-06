@@ -105,30 +105,6 @@
           </div>
           
           <div class="form-group">
-            <label for="register-email" class="form-label">电子邮箱</label>
-            <input 
-              id="register-email"
-              type="email" 
-              class="form-control" 
-              v-model="registerForm.email" 
-              placeholder="请输入有效的电子邮箱" 
-              required
-            />
-          </div>
-          
-          <div class="form-group">
-            <label for="register-phone" class="form-label">手机号码</label>
-            <input 
-              id="register-phone"
-              type="tel" 
-              class="form-control" 
-              v-model="registerForm.phone" 
-              placeholder="请输入手机号码" 
-              required
-            />
-          </div>
-          
-          <div class="form-group">
             <label for="register-password" class="form-label">设置密码</label>
             <div class="password-input">
               <input 
@@ -201,6 +177,7 @@
 <script setup>
 import { ref, reactive } from 'vue';
 import BaseLayout from '../../../components/BaseLayout.vue';
+import * as authService from '../../../services/authService';
 
 // 表单切换状态
 const activeForm = ref('login');
@@ -222,8 +199,6 @@ const registerLoading = ref(false);
 const registerError = ref('');
 const registerForm = reactive({
   username: '',
-  email: '',
-  phone: '',
   password: '',
   confirmPassword: '',
   userType: 'freelancer', // 'freelancer' 或 'employer'
@@ -236,27 +211,29 @@ const handleLogin = async () => {
   loginError.value = '';
   
   try {
-    // 模拟API请求
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // 这里应该有实际的登录逻辑，例如：
-    // const response = await authService.login({
-    //   username: loginForm.username,
-    //   password: loginForm.password,
-    //   userType: loginType.value
-    // });
-    
-    // 模拟登录成功
-    console.log('登录成功', {
+    console.log('登录请求:', {
       username: loginForm.username,
-      userType: loginType.value
+      password: loginForm.password
     });
     
-    // 重定向到个人资料页面
-    // router.push('/profile');
+    // 调用实际的登录API
+    const response = await authService.login(
+      loginForm.username,
+      loginForm.password
+    );
+    
+    console.log('登录成功:', response);
+    
+    // 登录成功后重定向到个人资料页面
+    window.location.href = '/profile';
   } catch (error) {
     console.error('登录失败:', error);
-    loginError.value = '用户名或密码错误，请重试';
+    
+    if (error instanceof Error) {
+      loginError.value = error.message;
+    } else {
+      loginError.value = '用户名或密码错误，请重试';
+    }
   } finally {
     loginLoading.value = false;
   }
@@ -274,24 +251,20 @@ const handleRegister = async () => {
   registerError.value = '';
   
   try {
-    // 模拟API请求
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // 这里应该有实际的注册逻辑，例如：
-    // const response = await authService.register({
-    //   username: registerForm.username,
-    //   email: registerForm.email,
-    //   phone: registerForm.phone,
-    //   password: registerForm.password,
-    //   userType: registerForm.userType
-    // });
-    
-    // 模拟注册成功
-    console.log('注册成功', {
+    console.log('发送注册请求:', {
       username: registerForm.username,
-      email: registerForm.email,
+      password: registerForm.password,
       userType: registerForm.userType
     });
+    
+    // 调用注册API
+    const response = await authService.register({
+      username: registerForm.username,
+      password: registerForm.password,
+      userType: registerForm.userType
+    });
+    
+    console.log('注册成功，响应:', response);
     
     // 显示成功提示并切换到登录表单
     alert('注册成功，请登录');
@@ -303,9 +276,17 @@ const handleRegister = async () => {
         registerForm[key] = key === 'agreeTerms' ? false : '';
       }
     });
+    
+    // 将注册的用户名自动填入登录表单
+    loginForm.username = registerForm.username;
   } catch (error) {
     console.error('注册失败:', error);
-    registerError.value = '注册失败，请稍后重试';
+    
+    if (error instanceof Error) {
+      registerError.value = error.message;
+    } else {
+      registerError.value = '注册失败，请稍后重试';
+    }
   } finally {
     registerLoading.value = false;
   }

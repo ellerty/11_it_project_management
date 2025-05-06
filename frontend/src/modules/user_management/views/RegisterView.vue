@@ -23,36 +23,15 @@
       
       <div class="register-form">
         <div class="form-group">
-          <label for="phone" class="form-label">手机号</label>
-          <div class="phone-input-group">
+          <label for="username" class="form-label">用户名</label>
+          <div class="username-input-group">
             <input 
               type="text" 
-              id="phone" 
-              v-model="phone" 
+              id="username" 
+              v-model="username" 
               class="form-input" 
-              placeholder="请输入手机号码"
+              placeholder="请输入用户名"
             />
-          </div>
-        </div>
-        
-        <div class="form-group">
-          <label for="verification" class="form-label">验证码</label>
-          <div class="verification-input-group">
-            <input 
-              type="text" 
-              id="verification" 
-              v-model="verificationCode" 
-              class="form-input" 
-              placeholder="请输入验证码"
-            />
-            <button 
-              type="button" 
-              class="send-code-btn" 
-              :disabled="countdown > 0"
-              @click="sendVerificationCode"
-            >
-              {{ countdown > 0 ? `${countdown}秒后重新发送` : '获取验证码' }}
-            </button>
           </div>
         </div>
         
@@ -101,11 +80,12 @@
         <div class="form-group">
           <button 
             class="register-button" 
-            :disabled="!isFormValid" 
+            :disabled="!isFormValid || isRegistering" 
             @click="handleRegister"
           >
-            注册
+            {{ isRegistering ? '注册中...' : '注册' }}
           </button>
+          <p v-if="registerError" class="error-message">{{ registerError }}</p>
         </div>
       </div>
       
@@ -119,18 +99,19 @@
 <script setup>
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
+import * as authService from '../../../services/authService';
 
 // 获取router实例
 const router = useRouter();
 
 // 状态
 const userType = ref('freelancer');
-const phone = ref('');
-const verificationCode = ref('');
+const username = ref('');
 const password = ref('');
 const showPassword = ref(false);
 const agreedToTerms = ref(false);
-const countdown = ref(0);
+const isRegistering = ref(false);
+const registerError = ref('');
 
 // 计算密码强度 (简单实现)
 const passwordStrength = computed(() => {
@@ -168,60 +149,94 @@ const getStrengthText = (strength) => {
 // 表单验证
 const isFormValid = computed(() => {
   return (
-    phone.value.length === 11 &&
-    verificationCode.value.length === 6 &&
+    username.value.length >= 3 &&
     password.value.length >= 8 &&
     agreedToTerms.value
   );
 });
 
-// 发送验证码
-const sendVerificationCode = () => {
-  if (phone.value.length !== 11) {
-    alert('请输入正确的手机号码');
-    return;
-  }
-  
-  // 模拟发送验证码
-  console.log(`发送验证码到 ${phone.value}`);
-  
-  // 开始倒计时
-  countdown.value = 60;
-  const timer = setInterval(() => {
-    countdown.value--;
-    if (countdown.value <= 0) {
-      clearInterval(timer);
-    }
-  }, 1000);
-};
-
 // 注册处理
-const handleRegister = () => {
+const handleRegister = async () => {
   if (!isFormValid.value) return;
   
-  // 这里应该调用注册API
-  console.log('尝试注册:', {
-    userType: userType.value,
-    phone: phone.value,
-    verificationCode: verificationCode.value,
-    password: password.value
-  });
+  isRegistering.value = true;
+  registerError.value = '';
   
-  // 注册成功后的跳转
-  router.push('/login');
+  try {
+    console.log('提交注册请求:', {
+      username: username.value,
+      password: password.value,
+      userType: userType.value
+    });
+    
+    // 尝试使用原生fetch API作为备选方案
+    try {
+      // 先尝试使用authService
+      const user = await authService.register({
+        username: username.value,
+        password: password.value,
+        userType: userType.value
+      });
+      
+      console.log('注册成功，用户信息:', user);
+      
+      // 注册成功
+      alert('注册成功，请登录');
+      
+      // 注册成功后的跳转
+      router.push('/login');
+    } catch (serviceError) {
+      console.error('authService失败，尝试使用fetch API:', serviceError);
+      
+      // authService失败后尝试使用fetch
+      const response = await fetch('http://localhost:8000/api/auth/register/', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          username: username.value,
+          password: password.value,
+          userType: userType.value
+        })
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Fetch API错误:', response.status, errorText);
+        throw new Error(`请求失败: ${response.status} ${errorText || response.statusText}`);
+      }
+      
+      const data = await response.json();
+      console.log('Fetch API成功:', data);
+      
+      // 注册成功
+      alert('注册成功，请登录');
+      
+      // 注册成功后的跳转
+      router.push('/login');
+    }
+  } catch (error) {
+    console.error('注册失败详情:', error);
+    registerError.value = error instanceof Error ? error.message : '注册失败，请稍后重试';
+  } finally {
+    isRegistering.value = false;
+  }
 };
 
-// 页面跳转
+// 跳转到登录页面
 const goToLogin = () => {
   router.push('/login');
 };
 
+// 显示用户协议
 const showTerms = () => {
-  console.log('显示用户协议');
+  alert('用户协议内容');
 };
 
+// 显示隐私政策
 const showPrivacy = () => {
-  console.log('显示隐私政策');
+  alert('隐私政策内容');
 };
 </script>
 
@@ -313,31 +328,9 @@ const showPrivacy = () => {
   box-shadow: 0 0 0 2px rgba(44, 110, 73, 0.1);
 }
 
-.phone-input-group,
-.verification-input-group,
+.username-input-group,
 .password-input-group {
   position: relative;
-}
-
-.send-code-btn {
-  position: absolute;
-  right: 5px;
-  top: 50%;
-  transform: translateY(-50%);
-  height: 38px;
-  padding: 0 12px;
-  background-color: #2c6e49;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  font-size: 13px;
-  cursor: pointer;
-  white-space: nowrap;
-}
-
-.send-code-btn:disabled {
-  background-color: #a5a5a5;
-  cursor: not-allowed;
 }
 
 .toggle-password {
@@ -446,14 +439,16 @@ const showPrivacy = () => {
   text-decoration: none;
 }
 
+.error-message {
+  color: #ff4d4f;
+  font-size: 14px;
+  margin-top: 10px;
+  text-align: center;
+}
+
 @media (max-width: 480px) {
   .register-card {
     padding: 25px;
   }
-  
-  .send-code-btn {
-    font-size: 12px;
-    padding: 0 8px;
-  }
 }
-</style> 
+</style>

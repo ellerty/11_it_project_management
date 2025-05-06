@@ -38,3 +38,10 @@ export const uploadAvatar = async (avatarFile: File): Promise<{avatar: string}> 
     throw error;
   }
 };
+
+// 导出默认对象以兼容import avatarService from '...'语法
+const avatarService = {
+  uploadAvatar
+};
+
+export default avatarService;
