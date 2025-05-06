@@ -6,10 +6,10 @@
         <span class="location"><i class="location-icon">📍</i> 北京 [切换]</span>
         <nav class="main-nav">
           <ul>
-            <li><a href="#" class="nav-link active">首页</a></li>
+            <li><router-link to="/" class="nav-link" :class="{ active: $route.path === '/' }">首页</router-link></li>
             <li><a href="#" class="nav-link">职位</a></li>
             <li><a href="#" class="nav-link">公司</a></li>
-            <li><a href="#" class="nav-link">接单/发包</a></li>
+            <li><router-link to="/task-filtering" class="nav-link" :class="{ active: $route.path === '/task-filtering' }" @click="navigateToTaskFiltering">接单/发包</router-link></li>
             <li><a href="#" class="nav-link">APP</a></li>
             <li><a href="#" class="nav-link">有了</a></li>
             <li><a href="#" class="nav-link">线上</a></li>
@@ -18,8 +18,9 @@
         </nav>
       </div>
       <div class="user-actions">
-        <a href="#" class="action-link">我要找活</a>
-        <a href="#" class="action-link">我要接单</a>
+        <router-link to="/" class="action-link">我要找活</router-link>
+        <router-link to="/task-filtering" class="action-link" @click="navigateToTaskFiltering">我要接单</router-link>
+        <button class="task-btn" @click="navigateToTaskFiltering">快速接单</button>
         
         <!-- 未登录状态显示登录/注册按钮 -->
         <template v-if="!isAuthenticated">
@@ -205,6 +206,19 @@ const goToHome = () => {
   router.push('/');
 };
 
+// 导航到任务筛选页面
+const navigateToTaskFiltering = () => {
+  console.log('正在导航到任务筛选页面...');
+  try {
+    router.push('/task-filtering');
+    console.log('成功导航到任务筛选页面');
+  } catch (error) {
+    console.error('导航到任务筛选页面时出错:', error);
+    // 尝试使用window.location作为备选方案
+    window.location.href = '/task-filtering';
+  }
+};
+
 // 处理退出登录
 const handleLogout = () => {
   authStore.logout();
@@ -333,6 +347,22 @@ onMounted(() => {
 .action-link:hover {
   color: #2c6e49;
   text-decoration: none;
+}
+
+.task-btn {
+  background-color: #4a8a64;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-right: 15px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.task-btn:hover {
+  background-color: #2c6e49;
 }
 
 .btn-login {

@@ -24,6 +24,13 @@ const routes: Array<RouteRecordRaw> = [
     meta: { title: '首页 - 智慧零工' }
   },
   {
+    path: '/task-filtering',
+    name: 'TaskFiltering',
+    // @ts-ignore
+    component: () => import('../modules/job_recommendation/views/TaskFilteringView.vue'),
+    meta: { title: '我要接单 - 智慧零工' }
+  },
+  {
     path: '/login',
     name: 'Login',
     // @ts-ignore

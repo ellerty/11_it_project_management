@@ -23,6 +23,10 @@
             <a href="#" class="hot-search-tag">远程工作</a>
             <a href="#" class="hot-search-tag">UI设计</a>
           </div>
+          <div class="action-buttons">
+            <router-link to="/task-filtering" class="take-job-button" @click="goToTaskFiltering">我要接单</router-link>
+            <button class="take-job-button-alt" @click="goToTaskFiltering">立即接单</button>
+          </div>
         </div>
       </div>
     </div>
@@ -31,6 +35,7 @@
     <div class="category-nav">
       <div class="category-container">
         <a href="#" class="category-item active">热门职位</a>
+        <router-link to="/task-filtering" class="category-item" @click="goToTaskFiltering">我要接单</router-link>
         <a href="#" class="category-item">Java</a>
         <a href="#" class="category-item">PHP</a>
         <a href="#" class="category-item">前端工程师</a>
@@ -88,25 +93,15 @@
     <div class="job-listings-section">
       <div class="job-listings-header">
         <h2 class="section-title">热招职位</h2>
-        <div class="filter-options">
-          <select class="filter-select" v-model="selectedLocation">
-            <option value="">所有地点</option>
-            <option v-for="location in locations" :key="location" :value="location">
-              {{ location }}
-            </option>
-          </select>
-          <select class="filter-select" v-model="selectedCategory">
-            <option value="">所有类别</option>
-            <option v-for="category in categories" :key="category.id" :value="category.id">
-              {{ category.name }}
-            </option>
-          </select>
-          <select class="filter-select" v-model="sortBy">
-            <option value="latest">最新发布</option>
-            <option value="salary_high">薪资从高到低</option>
-            <option value="salary_low">薪资从低到高</option>
-          </select>
-        </div>
+        <button class="filter-button" @click="showFilterPanel = !showFilterPanel">
+          <span>筛选</span>
+          <i class="filter-icon">{{ showFilterPanel ? '▲' : '▼' }}</i>
+        </button>
+      </div>
+      
+      <!-- 筛选面板 -->
+      <div v-show="showFilterPanel" class="filter-panel">
+        <TaskFilterComponent @filter-changed="handleFilterChange" />
       </div>
       
       <div class="job-listings">
@@ -180,7 +175,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import BaseLayout from '../../../components/BaseLayout.vue';
+import TaskFilterComponent from '../components/TaskFilterComponent.vue';
+
+// 初始化router
+const router = useRouter();
 
 // 状态
 const jobs = ref([]);
@@ -192,6 +192,7 @@ const selectedLocation = ref('');
 const sortBy = ref('latest');
 const currentPage = ref(1);
 const pageSize = 10;
+const showFilterPanel = ref(false);
 
 // 模拟数据
 const categories = ref([
@@ -362,10 +363,67 @@ const handleSearch = () => {
   currentPage.value = 1;
 };
 
+// 处理筛选组件的筛选变化
+const handleFilterChange = (filters) => {
+  console.log('收到筛选条件:', filters);
+  
+  // 根据行业分类映射到类别ID
+  const categoryMap = {
+    'internet': 1, // 互联网 -> 后端开发
+    'finance': 2,  // 金融 -> 前端开发
+    'education': 3, // 教育 -> 全栈开发
+    'medical': 4,  // 医疗 -> UI/UX设计
+    'food': 5,     // 餐饮 -> 产品经理
+    'retail': 6    // 零售 -> 项目管理
+    // 可以根据需要添加更多映射
+  };
+  
+  // 设置类别筛选
+  selectedCategory.value = categoryMap[filters.industry] || '';
+  
+  // 设置地点筛选
+  const locationMap = {
+    'beijing': '北京',
+    'shanghai': '上海',
+    'guangzhou': '广州',
+    'shenzhen': '深圳',
+    'hangzhou': '杭州',
+    'chengdu': '成都',
+    'wuhan': '武汉',
+    'nanjing': '南京'
+  };
+  selectedLocation.value = locationMap[filters.location] || '';
+  
+  // 根据薪资范围排序
+  if (filters.salary === '0-25') {
+    sortBy.value = 'salary_low';
+  } else if (filters.salary === '25-100' || filters.salary === '100+') {
+    sortBy.value = 'salary_high';
+  } else {
+    sortBy.value = 'latest'; // 默认按最新发布排序
+  }
+  
+  // 在实际项目中，还可以添加对其他筛选条件的处理
+  // 如工作经验、学历要求、紧急程度等
+  // 这里可以添加API参数或本地数据过滤条件
+  
+  // 重置到第一页
+  currentPage.value = 1;
+  
+  // 关闭筛选面板
+  showFilterPanel.value = false;
+};
+
 // 初始化
 onMounted(() => {
   fetchJobs();
 });
+
+// 添加goToTaskFiltering方法
+const goToTaskFiltering = () => {
+  // 使用编程式导航方式跳转
+  router.push('/task-filtering');
+};
 </script>
 
 <style scoped>
@@ -437,6 +495,52 @@ onMounted(() => {
 
 .hot-search-tag:hover {
   text-decoration: underline;
+}
+
+.action-buttons {
+  margin-top: 25px;
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+}
+
+.take-job-button {
+  display: inline-block;
+  background-color: white;
+  color: #2c6e49;
+  padding: 12px 30px;
+  font-size: 16px;
+  font-weight: bold;
+  text-decoration: none;
+  border-radius: 50px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  transition: all 0.3s ease;
+}
+
+.take-job-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+}
+
+.take-job-button-alt {
+  display: inline-block;
+  background-color: #2c6e49;
+  color: white;
+  padding: 12px 30px;
+  font-size: 16px;
+  font-weight: bold;
+  text-decoration: none;
+  border: none;
+  border-radius: 50px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.take-job-button-alt:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 15px rgba(0, 0, 0, 0.2);
+  background-color: #225539;
 }
 
 /* 分类导航样式 */
@@ -701,6 +805,40 @@ onMounted(() => {
   border-color: #2c6e49;
 }
 
+/* 筛选按钮和面板样式 */
+.filter-button {
+  display: flex;
+  align-items: center;
+  background-color: #f5f5f5;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 15px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.filter-button:hover {
+  background-color: #e8e8e8;
+}
+
+.filter-icon {
+  margin-left: 8px;
+  font-size: 12px;
+}
+
+.filter-panel {
+  margin-bottom: 20px;
+  animation: fadeIn 0.3s ease;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* 响应式样式 */
 @media (max-width: 1024px) {
   .carousel-slide {
@@ -718,15 +856,20 @@ onMounted(() => {
   }
   
   .job-listings-header {
-    flex-direction: column;
-    align-items: flex-start;
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
     gap: 15px;
   }
   
-  .filter-options {
-    width: 100%;
-    overflow-x: auto;
-    padding-bottom: 10px;
+  .filter-button {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+  
+  .filter-panel {
+    margin-bottom: 15px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   }
   
   .job-title-section, .company-section {
