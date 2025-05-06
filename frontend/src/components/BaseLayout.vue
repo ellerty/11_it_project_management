@@ -7,20 +7,38 @@
         <nav class="main-nav">
           <ul>
             <li><router-link to="/" class="nav-link" :class="{ active: $route.path === '/' }">首页</router-link></li>
-            <li><a href="#" class="nav-link">职位</a></li>
-            <li><a href="#" class="nav-link">公司</a></li>
-            <li><router-link to="/task-filtering" class="nav-link" :class="{ active: $route.path === '/task-filtering' }" @click="navigateToTaskFiltering">接单/发包</router-link></li>
+            
+            <!-- 雇主导航选项 -->
+            <template v-if="isEmployer">
+              <li><router-link to="/post-job" class="nav-link" :class="{ active: $route.path === '/post-job' }">发布任务</router-link></li>
+              <li><router-link to="/my-jobs" class="nav-link" :class="{ active: $route.path === '/my-jobs' }">我的任务</router-link></li>
+            </template>
+            
+            <!-- 求职者导航选项 -->
+            <template v-else>
+              <li><router-link to="/jobs" class="nav-link" :class="{ active: $route.path.startsWith('/jobs') }">职位</router-link></li>
+              <li><a href="#" class="nav-link">公司</a></li>
+              <li><router-link to="/task-filtering" class="nav-link" :class="{ active: $route.path === '/task-filtering' }">接单/发包</router-link></li>
+            </template>
+            
+            <!-- 通用导航选项 -->
             <li><a href="#" class="nav-link">APP</a></li>
-            <li><a href="#" class="nav-link">有了</a></li>
-            <li><a href="#" class="nav-link">线上</a></li>
             <li><a href="#" class="nav-link">自由职业专区</a></li>
           </ul>
         </nav>
       </div>
       <div class="user-actions">
-        <router-link to="/" class="action-link">我要找活</router-link>
-        <router-link to="/task-filtering" class="action-link" @click="navigateToTaskFiltering">我要接单</router-link>
-        <button class="task-btn" @click="navigateToTaskFiltering">快速接单</button>
+        <!-- 根据用户角色显示不同的链接 -->
+        <template v-if="isEmployer">
+          <router-link to="/post-job" class="action-link">发布任务</router-link>
+          <button class="task-btn" @click="navigateToPostJob">快速发包</button>
+        </template>
+        
+        <template v-else>
+          <router-link to="/" class="action-link">我要找活</router-link>
+          <router-link to="/task-filtering" class="action-link">我要接单</router-link>
+          <button class="task-btn" @click="navigateToTaskFiltering">快速接单</button>
+        </template>
         
         <!-- 未登录状态显示登录/注册按钮 -->
         <template v-if="!isAuthenticated">
@@ -149,6 +167,16 @@ const userRoleText = computed(() => {
   }
 });
 
+// 判断用户是否是雇主
+const isEmployer = computed(() => {
+  return currentUser.value?.role === 'employer';
+});
+
+// 判断用户是否是求职者/接单者
+const isJobSeeker = computed(() => {
+  return !isEmployer.value && isAuthenticated.value;
+});
+
 // 切换用户菜单显示状态
 const toggleUserMenu = () => {
   showUserMenu.value = !showUserMenu.value;
@@ -216,6 +244,19 @@ const navigateToTaskFiltering = () => {
     console.error('导航到任务筛选页面时出错:', error);
     // 尝试使用window.location作为备选方案
     window.location.href = '/task-filtering';
+  }
+};
+
+// 导航到发布任务页面
+const navigateToPostJob = () => {
+  console.log('正在导航到发布任务页面...');
+  try {
+    router.push('/post-job');
+    console.log('成功导航到发布任务页面');
+  } catch (error) {
+    console.error('导航到发布任务页面时出错:', error);
+    // 尝试使用window.location作为备选方案
+    window.location.href = '/post-job';
   }
 };
 

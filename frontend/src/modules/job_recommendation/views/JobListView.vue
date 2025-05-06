@@ -24,7 +24,7 @@
             <a href="#" class="hot-search-tag">UI设计</a>
           </div>
           <div class="action-buttons">
-            <router-link to="/task-filtering" class="take-job-button" @click="goToTaskFiltering">我要接单</router-link>
+            <router-link to="/task-filtering" class="take-job-button">我要接单</router-link>
             <button class="take-job-button-alt" @click="goToTaskFiltering">立即接单</button>
           </div>
         </div>
@@ -35,7 +35,7 @@
     <div class="category-nav">
       <div class="category-container">
         <a href="#" class="category-item active">热门职位</a>
-        <router-link to="/task-filtering" class="category-item" @click="goToTaskFiltering">我要接单</router-link>
+        <router-link to="/task-filtering" class="category-item">我要接单</router-link>
         <a href="#" class="category-item">Java</a>
         <a href="#" class="category-item">PHP</a>
         <a href="#" class="category-item">前端工程师</a>

@@ -31,6 +31,20 @@ const routes: Array<RouteRecordRaw> = [
     meta: { title: '我要接单 - 智慧零工' }
   },
   {
+    path: '/post-job',
+    name: 'PostJob',
+    // @ts-ignore
+    component: () => import('../modules/job_recommendation/views/PostJobView.vue'),
+    meta: { title: '发布任务 - 智慧零工', requiresAuth: true }
+  },
+  {
+    path: '/my-jobs',
+    name: 'MyJobs',
+    // @ts-ignore
+    component: () => import('../modules/job_recommendation/views/MyJobsView.vue'),
+    meta: { title: '我的任务 - 智慧零工', requiresAuth: true }
+  },
+  {
     path: '/login',
     name: 'Login',
     // @ts-ignore
