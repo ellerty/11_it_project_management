@@ -94,6 +94,17 @@ const routes: Array<RouteRecordRaw> = [
     meta: { title: '消息通知 - 智慧零工', requiresAuth: true }
   },
   {
+    path: '/admin',
+    name: 'AdminDashboard',
+    // @ts-ignore
+    component: () => import('../modules/admin/views/AdminDashboard.vue'),
+    meta: { 
+      title: '管理员后台 - 智慧零工', 
+      requiresAuth: true,
+      requiresAdmin: true
+    }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     // @ts-ignore
@@ -118,7 +129,13 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !authStore.isAuthenticated.value) {
     console.log('路由需要认证，重定向到登录页面:', to.path)
     next({ path: '/login', query: { redirect: to.fullPath } })
-  } else {
+  } 
+  // 检查是否需要管理员权限
+  else if (to.meta.requiresAdmin && authStore.state.user?.role !== 'admin') {
+    console.log('路由需要管理员权限:', to.path)
+    next({ path: '/' })
+  }
+  else {
     next()
   }
 })

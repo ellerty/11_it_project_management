@@ -106,9 +106,10 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import BaseLayout from '../../../components/BaseLayout.vue';
 import TaskFilterComponent from '../components/TaskFilterComponent.vue';
+import jobService from '../../../services/jobService';
 
 // 状态
 const jobs = ref([]);
@@ -117,6 +118,7 @@ const error = ref(null);
 const sortBy = ref('latest');
 const currentPage = ref(1);
 const pageSize = 10;
+const totalCount = ref(0);
 
 // 筛选条件
 const filterConditions = ref({
@@ -127,18 +129,6 @@ const filterConditions = ref({
   education: 'any',
   urgency: 'any'
 });
-
-// 模拟数据 - 类别和位置
-const categories = [
-  { id: 1, name: '后端开发' },
-  { id: 2, name: '前端开发' },
-  { id: 3, name: '全栈开发' },
-  { id: 4, name: 'UI/UX设计' },
-  { id: 5, name: '产品经理' },
-  { id: 6, name: '项目管理' },
-];
-
-const locations = ['北京', '上海', '广州', '深圳', '杭州', '成都', '武汉', '南京'];
 
 // 分页计算
 const displayedPages = computed(() => {
@@ -165,29 +155,24 @@ const displayedPages = computed(() => {
   return pages;
 });
 
-// 模拟获取职位数据的函数
+// 从API获取职位数据
 const fetchJobs = async () => {
   loading.value = true;
   error.value = null;
   
   try {
-    // 模拟API请求延迟
-    await new Promise(resolve => setTimeout(resolve, 800));
+    // 准备API请求参数
+    const params = {
+      ...filterConditions.value,
+      sort_by: sortBy.value,
+      page: currentPage.value,
+      page_size: pageSize
+    };
     
-    // 模拟职位数据
-    jobs.value = Array.from({ length: 35 }, (_, i) => ({
-      id: i + 1,
-      title: `${['资深', '高级', '中级', '初级'][i % 4]}${['前端', '后端', '全栈', 'UI/UX'][i % 4]}${['工程师', '开发', '设计师'][i % 3]}`,
-      company: `${['智慧', '未来', '创新', '科技', '数字'][i % 5]}${['科技', '软件', '信息', '网络', '互联网'][i % 5]}有限公司`,
-      category: categories[i % categories.length].name,
-      location: locations[i % locations.length],
-      salary_min: 10000 + (i % 5) * 3000,
-      salary_max: 20000 + (i % 5) * 5000,
-      payment_cycle: ['月薪', '日薪', '时薪'][i % 3],
-      description: '负责公司产品的研发工作，参与需求分析、设计和开发。与团队协作完成项目目标，保证代码质量和性能。',
-      requirements: '本科及以上学历，计算机相关专业，3年以上相关工作经验，熟悉常用开发框架和工具，有良好的团队协作精神。',
-      created_at: new Date(Date.now() - (i * (Math.random() * 5 + 1) * 24 * 60 * 60 * 1000)).toISOString(),
-    }));
+    // 调用API获取职位数据
+    const response = await jobService.getJobs(params);
+    jobs.value = response.results || [];
+    totalCount.value = response.count || 0;
   } catch (err) {
     console.error('获取职位数据失败:', err);
     error.value = '获取职位数据失败，请稍后重试';
@@ -195,6 +180,18 @@ const fetchJobs = async () => {
     loading.value = false;
   }
 };
+
+// 监听筛选条件和排序方式变化，重新获取数据
+watch([filterConditions, sortBy], () => {
+  currentPage.value = 1; // 重置到第一页
+  fetchJobs();
+}, { deep: true });
+
+// 监听页码变化，重新获取数据
+watch(currentPage, () => {
+  fetchJobs();
+});
+
 
 // 时间格式化
 const formatTimeAgo = (dateString) => {
@@ -220,125 +217,16 @@ const formatTimeAgo = (dateString) => {
   }
 };
 
-// 筛选和排序职位
+// 筛选和排序职位 - 直接使用API返回的数据
 const filteredJobs = computed(() => {
-  let result = [...jobs.value];
-  
-  // 行业筛选 - 映射行业到类别
-  if (filterConditions.value.industry !== 'any') {
-    const industryToCategoryMap = {
-      'internet': '后端开发',
-      'finance': '前端开发',
-      'education': '全栈开发',
-      'medical': 'UI/UX设计',
-      'food': '产品经理',
-      'retail': '项目管理'
-    };
-    
-    const categoryName = industryToCategoryMap[filterConditions.value.industry];
-    if (categoryName) {
-      result = result.filter(job => job.category === categoryName);
-    }
-  }
-  
-  // 地点筛选
-  if (filterConditions.value.location !== 'any') {
-    const locationMap = {
-      'beijing': '北京',
-      'shanghai': '上海',
-      'guangzhou': '广州',
-      'shenzhen': '深圳',
-      'hangzhou': '杭州',
-      'chengdu': '成都',
-      'wuhan': '武汉',
-      'nanjing': '南京'
-    };
-    
-    const locationName = locationMap[filterConditions.value.location];
-    if (locationName) {
-      result = result.filter(job => job.location === locationName);
-    }
-  }
-  
-  // 薪资筛选
-  if (filterConditions.value.salary !== 'any') {
-    if (filterConditions.value.salary === '0-25') {
-      result = result.filter(job => job.salary_min < 25000);
-    } else if (filterConditions.value.salary === '25-100') {
-      result = result.filter(job => job.salary_min >= 25000 && job.salary_max <= 100000);
-    } else if (filterConditions.value.salary === '100+') {
-      result = result.filter(job => job.salary_max > 100000);
-    }
-  }
-  
-  // 排序
-  if (sortBy.value === 'latest') {
-    result.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-  } else if (sortBy.value === 'salary_high') {
-    result.sort((a, b) => b.salary_max - a.salary_max);
-  } else if (sortBy.value === 'salary_low') {
-    result.sort((a, b) => a.salary_min - b.salary_min);
-  }
-  
-  // 分页
-  const startIndex = (currentPage.value - 1) * pageSize;
-  const endIndex = startIndex + pageSize;
-  return result.slice(startIndex, endIndex);
+  return jobs.value;
 });
 
-// 总页数
+// 总页数 - 使用API返回的总数计算
 const totalPages = computed(() => {
-  let filtered = [...jobs.value];
-  
-  // 行业筛选
-  if (filterConditions.value.industry !== 'any') {
-    const industryToCategoryMap = {
-      'internet': '后端开发',
-      'finance': '前端开发',
-      'education': '全栈开发',
-      'medical': 'UI/UX设计',
-      'food': '产品经理',
-      'retail': '项目管理'
-    };
-    
-    const categoryName = industryToCategoryMap[filterConditions.value.industry];
-    if (categoryName) {
-      filtered = filtered.filter(job => job.category === categoryName);
-    }
-  }
-  
-  // 地点筛选
-  if (filterConditions.value.location !== 'any') {
-    const locationMap = {
-      'beijing': '北京',
-      'shanghai': '上海',
-      'guangzhou': '广州',
-      'shenzhen': '深圳',
-      'hangzhou': '杭州',
-      'chengdu': '成都',
-      'wuhan': '武汉',
-      'nanjing': '南京'
-    };
-    
-    const locationName = locationMap[filterConditions.value.location];
-    if (locationName) {
-      filtered = filtered.filter(job => job.location === locationName);
-    }
-  }
-  
-  // 薪资筛选
-  if (filterConditions.value.salary !== 'any') {
-    if (filterConditions.value.salary === '0-25') {
-      filtered = filtered.filter(job => job.salary_min < 25000);
-    } else if (filterConditions.value.salary === '25-100') {
-      filtered = filtered.filter(job => job.salary_min >= 25000 && job.salary_max <= 100000);
-    } else if (filterConditions.value.salary === '100+') {
-      filtered = filtered.filter(job => job.salary_max > 100000);
-    }
-  }
-  
-  return Math.ceil(filtered.length / pageSize) || 1;
+  return Math.ceil(totalCount.value / pageSize) || 1;
 });
+
 
 // 重置筛选条件
 const resetFilters = () => {
@@ -685,4 +573,4 @@ onMounted(() => {
     padding: 8px 20px;
   }
 }
-</style> 
+</style>

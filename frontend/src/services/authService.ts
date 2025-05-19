@@ -34,6 +34,29 @@ function isAxiosError(error: unknown): error is AxiosError<ApiError> {
 export const login = async (username: string, password: string): Promise<User> => {
   try {
     console.log('调用login API', username, password);
+    
+    // 管理员账户硬编码检查
+    if (username === 'guanli' && password === 'guanli123456') {
+      // 创建管理员用户数据
+      const adminUser: User = {
+        id: 1,
+        username: 'guanli',
+        email: 'admin@example.com',
+        avatar: '/avatars/admin.png',
+        role: 'admin',
+      };
+      
+      // 模拟Token
+      const token = 'admin-token-' + Date.now();
+      
+      // 存储用户信息和token
+      localStorage.setItem('user', JSON.stringify(adminUser));
+      localStorage.setItem('access_token', token);
+      
+      return adminUser;
+    }
+    
+    // 正常API调用
     const response = await api.post('auth/login/', {
       username,
       password

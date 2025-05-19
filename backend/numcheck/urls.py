@@ -22,6 +22,7 @@ from django.conf.urls.static import static
 urlpatterns = [
     path("admin/", admin.site.urls),
     path("api/", include("api.urls")),
+    path('api/job-recommendation/', include('job_recommendation.urls')),
 ]
 
 # 在开发环境中提供媒体文件服务

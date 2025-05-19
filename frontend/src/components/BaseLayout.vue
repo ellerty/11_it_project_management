@@ -14,6 +14,11 @@
               <li><router-link to="/my-jobs" class="nav-link" :class="{ active: $route.path === '/my-jobs' }">我的任务</router-link></li>
             </template>
             
+            <!-- 管理员导航选项 -->
+            <template v-else-if="isAdmin">
+              <li><router-link to="/admin" class="nav-link" :class="{ active: $route.path.startsWith('/admin') }">管理后台</router-link></li>
+            </template>
+            
             <!-- 求职者导航选项 -->
             <template v-else>
               <li><router-link to="/jobs" class="nav-link" :class="{ active: $route.path.startsWith('/jobs') }">职位</router-link></li>
@@ -32,6 +37,12 @@
         <template v-if="isEmployer">
           <router-link to="/post-job" class="action-link">发布任务</router-link>
           <button class="task-btn" @click="navigateToPostJob">快速发包</button>
+        </template>
+        
+        <!-- 管理员操作区域 -->
+        <template v-else-if="isAdmin">
+          <router-link to="/admin" class="action-link">管理控制台</router-link>
+          <button class="task-btn admin-btn" @click="navigateToAdmin">进入后台</button>
         </template>
         
         <template v-else>
@@ -177,6 +188,11 @@ const isJobSeeker = computed(() => {
   return !isEmployer.value && isAuthenticated.value;
 });
 
+// 判断用户是否是管理员
+const isAdmin = computed(() => {
+  return currentUser.value?.role === 'admin';
+});
+
 // 切换用户菜单显示状态
 const toggleUserMenu = () => {
   showUserMenu.value = !showUserMenu.value;
@@ -257,6 +273,19 @@ const navigateToPostJob = () => {
     console.error('导航到发布任务页面时出错:', error);
     // 尝试使用window.location作为备选方案
     window.location.href = '/post-job';
+  }
+};
+
+// 导航到管理员后台页面
+const navigateToAdmin = () => {
+  console.log('正在导航到管理员后台页面...');
+  try {
+    router.push('/admin');
+    console.log('成功导航到管理员后台页面');
+  } catch (error) {
+    console.error('导航到管理员后台页面时出错:', error);
+    // 尝试使用window.location作为备选方案
+    window.location.href = '/admin';
   }
 };
 
@@ -404,6 +433,22 @@ onMounted(() => {
 
 .task-btn:hover {
   background-color: #2c6e49;
+}
+
+.admin-btn {
+  background-color: #2c6e49;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-right: 15px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+}
+
+.admin-btn:hover {
+  background-color: #224f38;
 }
 
 .btn-login {
