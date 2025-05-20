@@ -15,6 +15,35 @@ class JobCategory(models.Model):
 
 class Job(models.Model):
     """职位信息"""
+    PAYMENT_CYCLE_CHOICES = (
+        ('hourly', '时薪'),
+        ('daily', '日薪'),
+        ('monthly', '月薪'),
+        ('project', '项目计价'),
+    )
+    
+    URGENCY_CHOICES = (
+        ('normal', '普通'),
+        ('urgent', '紧急'),
+        ('very-urgent', '非常紧急'),
+    )
+    
+    EXPERIENCE_CHOICES = (
+        ('any', '经验不限'),
+        ('0-3', '3年及以下'),
+        ('3-5', '3-5年'),
+        ('5-10', '5-10年'),
+        ('10+', '10年以上'),
+    )
+    
+    EDUCATION_CHOICES = (
+        ('any', '学历不限'),
+        ('college', '大专'),
+        ('bachelor', '本科'),
+        ('master', '硕士'),
+        ('phd', '博士'),
+    )
+    
     title = models.CharField(max_length=200, verbose_name="职位标题")
     company = models.CharField(max_length=200, verbose_name="公司名称")
     category = models.ForeignKey(JobCategory, on_delete=models.CASCADE, related_name="jobs", verbose_name="职位类别")
@@ -26,6 +55,11 @@ class Job(models.Model):
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
     is_active = models.BooleanField(default=True, verbose_name="是否有效")
+    payment_cycle = models.CharField(max_length=20, choices=PAYMENT_CYCLE_CHOICES, default='monthly', verbose_name="薪资周期")
+    urgency = models.CharField(max_length=20, choices=URGENCY_CHOICES, default='normal', verbose_name="紧急程度")
+    experience = models.CharField(max_length=20, choices=EXPERIENCE_CHOICES, default='any', verbose_name="经验要求")
+    education = models.CharField(max_length=20, choices=EDUCATION_CHOICES, default='any', verbose_name="学历要求")
+    tags = models.CharField(max_length=500, blank=True, null=True, verbose_name="职位标签")
     
     class Meta:
         verbose_name = "职位"

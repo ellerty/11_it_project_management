@@ -25,11 +25,11 @@
             
             <div class="form-row">
               <div class="form-group half">
-                <label for="job-category">行业分类 <span class="required">*</span></label>
+                <label for="job-category">职位类别 <span class="required">*</span></label>
                 <select id="job-category" v-model="jobForm.category" class="form-control" required>
-                  <option value="">选择行业分类</option>
-                  <option v-for="category in industryCategories" :key="category.value" :value="category.value">
-                    {{ category.label }}
+                  <option value="">选择职位类别</option>
+                  <option v-for="category in jobCategories" :key="category.id" :value="category.id">
+                    {{ category.name }}
                   </option>
                 </select>
               </div>
@@ -179,6 +179,10 @@
             </div>
           </div>
           
+          <div class="form-error" v-if="errorMessage">
+            <p class="error-message">{{ errorMessage }}</p>
+          </div>
+          
           <div class="form-actions">
             <button type="button" class="btn-secondary" @click="resetForm">重置</button>
             <button type="submit" class="btn-primary" :disabled="isSubmitting">{{ isSubmitting ? '发布中...' : '发布任务' }}</button>
@@ -190,12 +194,15 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import BaseLayout from '../../../components/BaseLayout.vue';
+import jobService from '../../../services/jobService';
 
 const router = useRouter();
 const isSubmitting = ref(false);
+const errorMessage = ref('');
+const jobCategories = ref([]);
 
 // 定义行业分类和地点数据
 const industryCategories = [
@@ -211,17 +218,18 @@ const industryCategories = [
   { label: '广告营销', value: 'marketing' }
 ];
 
+// 地理位置数据
 const locations = [
-  { label: '北京', value: 'beijing' },
-  { label: '上海', value: 'shanghai' },
-  { label: '广州', value: 'guangzhou' },
-  { label: '深圳', value: 'shenzhen' },
-  { label: '杭州', value: 'hangzhou' },
-  { label: '成都', value: 'chengdu' },
-  { label: '武汉', value: 'wuhan' },
-  { label: '南京', value: 'nanjing' },
-  { label: '西安', value: 'xian' },
-  { label: '重庆', value: 'chongqing' }
+  { label: '北京', value: '北京' },
+  { label: '上海', value: '上海' },
+  { label: '广州', value: '广州' },
+  { label: '深圳', value: '深圳' },
+  { label: '杭州', value: '杭州' },
+  { label: '成都', value: '成都' },
+  { label: '武汉', value: '武汉' },
+  { label: '南京', value: '南京' },
+  { label: '西安', value: '西安' },
+  { label: '重庆', value: '重庆' }
 ];
 
 // 常见的标签
@@ -248,6 +256,43 @@ const jobForm = ref({
   education: 'any',
   tags: []
 });
+
+// 在组件挂载时获取职位类别
+onMounted(async () => {
+  try {
+    await fetchJobCategories();
+  } catch (error) {
+    console.error('获取职位类别失败:', error);
+    errorMessage.value = '获取职位类别失败，请刷新页面重试';
+  }
+});
+
+// 获取职位类别
+const fetchJobCategories = async () => {
+  try {
+    const result = await jobService.getJobCategories();
+    jobCategories.value = result.results || result;
+    
+    // 如果没有职位类别数据，需要创建初始类别
+    if (jobCategories.value.length === 0) {
+      console.warn('没有找到职位类别数据，使用行业分类作为备选');
+      // 转换行业分类为职位类别格式
+      jobCategories.value = industryCategories.map((industry, index) => ({
+        id: index + 1,
+        name: industry.label,
+        description: `${industry.label}行业相关职位`
+      }));
+    }
+  } catch (error) {
+    console.error('获取职位类别失败:', error);
+    // 出错时使用行业分类作为备选
+    jobCategories.value = industryCategories.map((industry, index) => ({
+      id: index + 1,
+      name: industry.label,
+      description: `${industry.label}行业相关职位`
+    }));
+  }
+};
 
 // 切换标签选中状态
 const toggleTag = (tag) => {
@@ -283,23 +328,32 @@ const resetForm = () => {
     education: 'any',
     tags: []
   };
+  errorMessage.value = '';
 };
 
 // 提交任务
 const submitJob = async () => {
   try {
     isSubmitting.value = true;
+    errorMessage.value = '';
     console.log('提交任务表单:', jobForm.value);
     
-    // 模拟API请求
-    await new Promise(resolve => setTimeout(resolve, 1500));
+    // 调用API发布任务
+    const result = await jobService.createJob(jobForm.value);
+    console.log('任务发布成功:', result);
     
-    // 模拟成功提交
     alert('任务发布成功！');
     router.push('/my-jobs');
   } catch (error) {
     console.error('发布任务失败:', error);
-    alert('发布失败，请重试');
+    if (error.response && error.response.data) {
+      // 显示后端返回的错误信息
+      errorMessage.value = error.response.data.detail || 
+                           error.response.data.message || 
+                           '发布失败，请检查表单并重试';
+    } else {
+      errorMessage.value = '发布失败，请重试';
+    }
   } finally {
     isSubmitting.value = false;
   }
@@ -489,6 +543,20 @@ textarea.form-control {
   cursor: not-allowed;
 }
 
+.form-error {
+  margin-bottom: 20px;
+  padding: 10px 15px;
+  background-color: #ffebee;
+  border-left: 4px solid #e53935;
+  border-radius: 4px;
+}
+
+.error-message {
+  color: #c62828;
+  margin: 0;
+  font-size: 14px;
+}
+
 @media (max-width: 768px) {
   .post-job-container {
     padding: 20px 15px;
@@ -516,4 +584,4 @@ textarea.form-control {
     width: 100%;
   }
 }
-</style> 
+</style>

@@ -1,20 +1,27 @@
 <template>
   <div class="task-filter-container">
-    <!-- 行业分类 -->
+    <!-- 职位类别 -->
     <div class="filter-section">
-      <h3 class="filter-section-title">行业分类</h3>
+      <h3 class="filter-section-title">职位类别</h3>
       <div class="filter-options">
         <button 
-          v-for="(category, index) in industryCategories" 
-          :key="index" 
           class="filter-tag" 
-          :class="{ 'active': selectedIndustry === category.value }"
-          @click="selectIndustry(category.value)"
+          :class="{ 'active': selectedCategory === 'any' }"
+          @click="selectCategory('any')"
         >
-          {{ category.label }}
+          不限
         </button>
-        <button class="filter-tag more-btn" @click="showMoreIndustries = !showMoreIndustries">
-          {{ showMoreIndustries ? '收起' : '更多' }}
+        <button 
+          v-for="category in jobCategories" 
+          :key="category.id" 
+          class="filter-tag" 
+          :class="{ 'active': selectedCategory === category.id.toString() }"
+          @click="selectCategory(category.id.toString())"
+        >
+          {{ category.name }}
+        </button>
+        <button v-if="jobCategories.length > 10" class="filter-tag more-btn" @click="showMoreCategories = !showMoreCategories">
+          {{ showMoreCategories ? '收起' : '更多' }}
         </button>
       </div>
     </div>
@@ -23,6 +30,13 @@
     <div class="filter-section">
       <h3 class="filter-section-title">地理位置</h3>
       <div class="filter-options">
+        <button 
+          class="filter-tag" 
+          :class="{ 'active': selectedLocation === '不限' }"
+          @click="selectLocation('不限')"
+        >
+          不限
+        </button>
         <button 
           v-for="(location, index) in locations" 
           :key="index" 
@@ -40,7 +54,7 @@
 
     <!-- 薪资范围 -->
     <div class="filter-section">
-      <h3 class="filter-section-title">薪资范围(时薪)</h3>
+      <h3 class="filter-section-title">薪资范围</h3>
       <div class="filter-options">
         <button 
           v-for="(salary, index) in salaryRanges" 
@@ -111,87 +125,116 @@
 </template>
 
 <script setup>
-import { ref, defineEmits } from 'vue';
+import { ref, defineEmits, onMounted } from 'vue';
+import jobService from '../../../services/jobService';
 
 const emit = defineEmits(['filter-changed']);
 
 // 控制显示更多选项的状态
-const showMoreIndustries = ref(false);
+const showMoreCategories = ref(false);
 const showMoreLocations = ref(false);
 
+// 职位类别数据
+const jobCategories = ref([]);
+const defaultCategoryId = ref('any');
+
 // 筛选选项
-const selectedIndustry = ref('internet');
-const selectedLocation = ref('beijing');
+const selectedCategory = ref(defaultCategoryId.value);
+const selectedLocation = ref('不限');
 const selectedSalary = ref('any');
 const selectedExperience = ref('any');
 const selectedEducation = ref('any');
-const selectedUrgency = ref('any');
-
-// 行业分类数据
-const industryCategories = [
-  { label: '互联网', value: 'internet' },
-  { label: '金融', value: 'finance' },
-  { label: '教育', value: 'education' },
-  { label: '医疗', value: 'medical' },
-  { label: '餐饮', value: 'food' },
-  { label: '零售', value: 'retail' },
-  { label: '制造业', value: 'manufacturing' },
-  { label: '物流', value: 'logistics' },
-  { label: '房地产', value: 'realestate' },
-  { label: '广告营销', value: 'marketing' }
-];
+const selectedUrgency = ref('normal');
 
 // 地理位置数据
 const locations = [
-  { label: '北京', value: 'beijing' },
-  { label: '上海', value: 'shanghai' },
-  { label: '广州', value: 'guangzhou' },
-  { label: '深圳', value: 'shenzhen' },
-  { label: '杭州', value: 'hangzhou' },
-  { label: '成都', value: 'chengdu' },
-  { label: '武汉', value: 'wuhan' },
-  { label: '南京', value: 'nanjing' },
-  { label: '西安', value: 'xian' },
-  { label: '重庆', value: 'chongqing' }
+  { label: '北京', value: '北京' },
+  { label: '上海', value: '上海' },
+  { label: '广州', value: '广州' },
+  { label: '深圳', value: '深圳' },
+  { label: '杭州', value: '杭州' },
+  { label: '成都', value: '成都' },
+  { label: '武汉', value: '武汉' },
+  { label: '南京', value: '南京' },
+  { label: '西安', value: '西安' },
+  { label: '重庆', value: '重庆' }
 ];
 
 // 薪资范围数据
 const salaryRanges = [
   { label: '不限', value: 'any' },
-  { label: '0-25h', value: '0-25' },
-  { label: '25h-100h', value: '25-100' },
-  { label: '100h+', value: '100+' }
+  { label: '0-25K', value: '0-25' },
+  { label: '25-100K', value: '25-100' },
+  { label: '100K+', value: '100+' }
 ];
 
-// 工作经验数据
+// 工作经验数据 - 与发布页面保持一致
 const experienceLevels = [
-  { label: '在校/应届', value: 'student' },
+  { label: '经验不限', value: 'any' },
   { label: '3年及以下', value: '0-3' },
   { label: '3-5年', value: '3-5' },
   { label: '5-10年', value: '5-10' },
-  { label: '10年以上', value: '10+' },
-  { label: '经验不限', value: 'any' }
+  { label: '10年以上', value: '10+' }
 ];
 
 // 学历要求数据
 const educationLevels = [
+  { label: '学历不限', value: 'any' },
   { label: '大专', value: 'college' },
   { label: '本科', value: 'bachelor' },
   { label: '硕士', value: 'master' },
-  { label: '博士', value: 'phd' },
-  { label: '不要求', value: 'any' }
+  { label: '博士', value: 'phd' }
 ];
 
-// 紧急程度数据
+// 紧急程度数据 - 与发布页面保持一致
 const urgencyLevels = [
-  { label: '1-4小时', value: '1-4h' },
-  { label: '4-8小时', value: '4-8h' },
-  { label: '不紧急', value: 'not_urgent' }
+  { label: '普通', value: 'normal' },
+  { label: '紧急', value: 'urgent' },
+  { label: '非常紧急', value: 'very-urgent' }
 ];
+
+// 获取职位类别
+const fetchJobCategories = async () => {
+  try {
+    const result = await jobService.getJobCategories();
+    jobCategories.value = result.results || result;
+    
+    // 如果没有职位类别数据，使用备选行业分类
+    if (jobCategories.value.length === 0) {
+      console.warn('没有找到职位类别数据，使用备选分类');
+      const fallbackCategories = [
+        { id: 1, name: '后端开发', description: '负责服务器端应用程序的开发和维护' },
+        { id: 2, name: '前端开发', description: '负责用户界面和交互体验的开发' },
+        { id: 3, name: '全栈开发', description: '同时负责前端和后端开发' },
+        { id: 4, name: 'UI/UX设计', description: '负责用户界面设计和用户体验优化' },
+        { id: 5, name: '产品经理', description: '负责产品规划、需求分析和产品生命周期管理' },
+        { id: 6, name: '项目管理', description: '负责项目计划、执行和监控' }
+      ];
+      jobCategories.value = fallbackCategories;
+    }
+  } catch (error) {
+    console.error('获取职位类别失败:', error);
+    // 使用备选分类
+    const fallbackCategories = [
+      { id: 1, name: '后端开发', description: '负责服务器端应用程序的开发和维护' },
+      { id: 2, name: '前端开发', description: '负责用户界面和交互体验的开发' },
+      { id: 3, name: '全栈开发', description: '同时负责前端和后端开发' },
+      { id: 4, name: 'UI/UX设计', description: '负责用户界面设计和用户体验优化' },
+      { id: 5, name: '产品经理', description: '负责产品规划、需求分析和产品生命周期管理' },
+      { id: 6, name: '项目管理', description: '负责项目计划、执行和监控' }
+    ];
+    jobCategories.value = fallbackCategories;
+  }
+};
+
+// 组件挂载时获取职位类别
+onMounted(async () => {
+  await fetchJobCategories();
+});
 
 // 选择筛选选项函数
-const selectIndustry = (value) => {
-  selectedIndustry.value = value;
+const selectCategory = (value) => {
+  selectedCategory.value = value;
 };
 
 const selectLocation = (value) => {
@@ -216,18 +259,18 @@ const selectUrgency = (value) => {
 
 // 重置所有筛选条件
 const resetFilters = () => {
-  selectedIndustry.value = 'internet';
-  selectedLocation.value = 'beijing';
+  selectedCategory.value = 'any';
+  selectedLocation.value = '不限';
   selectedSalary.value = 'any';
   selectedExperience.value = 'any';
   selectedEducation.value = 'any';
-  selectedUrgency.value = 'any';
+  selectedUrgency.value = 'normal';
 };
 
 // 应用筛选条件
 const applyFilters = () => {
   const filters = {
-    industry: selectedIndustry.value,
+    category: selectedCategory.value, // 使用类别ID而不是行业
     location: selectedLocation.value,
     salary: selectedSalary.value,
     experience: selectedExperience.value,
@@ -253,108 +296,75 @@ const applyFilters = () => {
   margin-bottom: 1.5rem;
 }
 
-.filter-section:last-child {
-  margin-bottom: 0;
-}
-
 .filter-section-title {
   font-size: 1rem;
   font-weight: 600;
-  color: var(--text-color, #333333);
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
+  color: var(--dark, #333);
 }
 
 .filter-options {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.5rem;
 }
 
 .filter-tag {
-  padding: 0.5rem 1rem;
-  background-color: #f5f5f5;
+  background-color: var(--light-bg, #f5f5f5);
   border: none;
   border-radius: 50px;
-  font-size: 0.9rem;
-  color: var(--text-color, #333333);
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  color: var(--text-secondary, #666);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .filter-tag:hover {
-  background-color: #eaeaea;
+  background-color: var(--light-hover, #e8e8e8);
 }
 
 .filter-tag.active {
   background-color: var(--primary-light, #a5e5bc);
-  color: var(--accent-color, #2c6e49);
+  color: var(--primary, #2c6e49);
   font-weight: 500;
 }
 
 .more-btn {
-  color: var(--accent-color, #2c6e49);
+  color: var(--primary, #2c6e49);
   background-color: transparent;
+  border: 1px dashed var(--primary-light, #a5e5bc);
 }
 
 .filter-actions {
   display: flex;
-  justify-content: space-between;
-  margin-top: 2rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #f0f0f0;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.btn-reset, .btn-confirm {
+  padding: 0.5rem 1.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  flex: 1;
 }
 
 .btn-reset {
-  padding: 0.75rem 1.5rem;
-  background-color: transparent;
-  border: 1px solid #d9d9d9;
-  border-radius: 6px;
-  font-size: 1rem;
-  color: var(--text-color, #333333);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.btn-reset:hover {
-  background-color: #f5f5f5;
+  background-color: var(--light-bg, #f5f5f5);
+  border: 1px solid var(--border, #ddd);
+  color: var(--text-secondary, #666);
 }
 
 .btn-confirm {
-  padding: 0.75rem 2rem;
-  background-color: var(--primary-color, #a5e5bc);
+  background-color: var(--primary, #2c6e49);
   border: none;
-  border-radius: 6px;
-  font-size: 1rem;
-  font-weight: 500;
-  color: var(--accent-color, #2c6e49);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 6px rgba(44, 110, 73, 0.2);
-}
-
-.btn-confirm:hover {
-  background-color: #95d5ac;
-  box-shadow: 0 4px 8px rgba(44, 110, 73, 0.25);
-  transform: translateY(-2px);
+  color: white;
 }
 
 @media (max-width: 768px) {
-  .task-filter-container {
-    padding: 1rem;
-  }
-  
-  .filter-tag {
-    padding: 0.4rem 0.8rem;
-    font-size: 0.85rem;
-  }
-  
   .filter-actions {
     flex-direction: column;
-    gap: 1rem;
-  }
-  
-  .btn-reset, .btn-confirm {
-    width: 100%;
   }
 }
 </style> 

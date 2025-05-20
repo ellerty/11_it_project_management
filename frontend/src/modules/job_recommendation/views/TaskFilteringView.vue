@@ -15,6 +15,32 @@
         <div class="job-content">
           <div class="job-header">
             <div class="job-count">找到 <span class="highlight">{{ filteredJobs.length }}</span> 个符合条件的工作</div>
+            <div class="active-filters" v-if="hasActiveFilters">
+              <span class="filter-label">当前筛选:</span>
+              <div class="filter-chips">
+                <div v-if="filterConditions.category !== 'any'" class="filter-chip">
+                  职位: {{ getCategoryNameById(filterConditions.category) }}
+                  <button class="clear-filter" @click="clearFilter('category')">×</button>
+                </div>
+                <div v-if="filterConditions.location !== 'any'" class="filter-chip">
+                  地点: {{ formatLocation(filterConditions.location) }}
+                  <button class="clear-filter" @click="clearFilter('location')">×</button>
+                </div>
+                <div v-if="filterConditions.salary !== 'any'" class="filter-chip">
+                  薪资: {{ getSalaryLabel(filterConditions.salary) }}
+                  <button class="clear-filter" @click="clearFilter('salary')">×</button>
+                </div>
+                <div v-if="filterConditions.experience !== 'any'" class="filter-chip">
+                  经验: {{ getExperienceLabel(filterConditions.experience) }}
+                  <button class="clear-filter" @click="clearFilter('experience')">×</button>
+                </div>
+                <div v-if="filterConditions.education !== 'any'" class="filter-chip">
+                  学历: {{ getEducationLabel(filterConditions.education) }}
+                  <button class="clear-filter" @click="clearFilter('education')">×</button>
+                </div>
+              </div>
+              <button class="clear-all-filters" @click="resetFilters">清除全部</button>
+            </div>
             <div class="sort-options">
               <span>排序方式：</span>
               <select v-model="sortBy" class="sort-select">
@@ -37,7 +63,15 @@
             
             <div v-else-if="filteredJobs.length === 0" class="empty-state">
               <p>没有找到符合条件的职位</p>
-              <button class="reset-button" @click="resetFilters">重置筛选条件</button>
+              <p class="filter-tip">当前筛选条件可能过于严格，您可以尝试：</p>
+              <ul class="filter-suggestions">
+                <li v-if="filterConditions.category !== 'any'">选择"不限"职位类别</li>
+                <li v-if="filterConditions.location !== 'any'">选择"不限"地理位置</li>
+                <li v-if="filterConditions.salary !== 'any'">取消薪资范围限制</li>
+                <li v-if="filterConditions.experience !== 'any'">取消经验要求限制</li>
+                <li v-if="filterConditions.education !== 'any'">取消学历要求限制</li>
+              </ul>
+              <button class="reset-button" @click="resetFilters">重置所有筛选条件</button>
             </div>
             
             <div v-else>
@@ -45,13 +79,13 @@
                 <div class="job-card-header">
                   <div class="job-title-section">
                     <h3 class="job-title">{{ job.title }}</h3>
-                    <div class="job-salary">{{ job.salary_min/1000 }}-{{ job.salary_max/1000 }}K·{{ job.payment_cycle || '月薪' }}</div>
+                    <div class="job-salary">{{ formatSalary(job.salary_min, job.salary_max) }}·{{ formatPaymentCycle(job.payment_cycle) }}</div>
                   </div>
                   <div class="company-section">
                     <div class="company-name">{{ job.company }}</div>
                     <div class="job-meta">
-                      <span class="job-location">{{ job.location }}</span>
-                      <span class="job-category">{{ job.category }}</span>
+                      <span class="job-location">{{ formatLocation(job.location) }}</span>
+                      <span class="job-category">{{ job.category_name || getCategoryNameById(job.category) }}</span>
                     </div>
                   </div>
                 </div>
@@ -63,12 +97,10 @@
                 </div>
                 <div class="job-card-footer">
                   <div class="job-tags">
-                    <span class="job-tag">灵活工作制</span>
-                    <span class="job-tag">周末双休</span>
-                    <span class="job-tag">远程办公</span>
+                    <span v-for="(tag, index) in job.tags_list || getJobTags(job.tags)" :key="index" class="job-tag">{{ tag }}</span>
                   </div>
                   <div class="job-actions">
-                    <button class="apply-button">立即应聘</button>
+                    <button class="apply-button" @click="applyForJob(job)">立即应聘</button>
                     <div class="posted-time">{{ formatTimeAgo(job.created_at) }}</div>
                   </div>
                 </div>
@@ -107,12 +139,16 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import BaseLayout from '../../../components/BaseLayout.vue';
 import TaskFilterComponent from '../components/TaskFilterComponent.vue';
 import jobService from '../../../services/jobService';
 
+const router = useRouter();
+
 // 状态
 const jobs = ref([]);
+const categories = ref([]);
 const loading = ref(true);
 const error = ref(null);
 const sortBy = ref('latest');
@@ -122,12 +158,12 @@ const totalCount = ref(0);
 
 // 筛选条件
 const filterConditions = ref({
-  industry: 'internet',
-  location: 'beijing',
+  category: 'any', // 不限职位类别
+  location: '不限', // 不限地理位置
   salary: 'any',
   experience: 'any',
   education: 'any',
-  urgency: 'any'
+  urgency: 'normal'
 });
 
 // 分页计算
@@ -155,6 +191,87 @@ const displayedPages = computed(() => {
   return pages;
 });
 
+// 获取职位类别列表
+const fetchJobCategories = async () => {
+  try {
+    const result = await jobService.getJobCategories();
+    categories.value = result.results || result;
+  } catch (error) {
+    console.error('获取职位类别失败:', error);
+  }
+};
+
+// 根据类别ID获取类别名称
+const getCategoryNameById = (categoryId) => {
+  const category = categories.value.find(c => c.id === categoryId);
+  if (category) {
+    return category.name;
+  }
+  
+  // 行业映射
+  const industryNameMap = {
+    1: '后端开发',
+    2: '前端开发',
+    3: '全栈开发',
+    4: 'UI/UX设计',
+    5: '产品经理',
+    6: '项目管理'
+  };
+  
+  return industryNameMap[categoryId] || '未知类别';
+};
+
+// 处理薪资显示格式
+const formatSalary = (min, max) => {
+  if (!min && !max) return '薪资面议';
+  
+  const minValue = min ? min / 1000 : 0;
+  const maxValue = max ? max / 1000 : 0;
+  
+  if (minValue === 0) return `${maxValue}K`;
+  if (maxValue === 0) return `${minValue}K`;
+  
+  return `${minValue}-${maxValue}K`;
+};
+
+// 处理支付周期
+const formatPaymentCycle = (cycle) => {
+  const cycleMap = {
+    'hourly': '时薪',
+    'daily': '日薪',
+    'monthly': '月薪',
+    'project': '项目计价'
+  };
+  
+  return cycleMap[cycle] || '月薪';
+};
+
+// 处理位置显示
+const formatLocation = (location) => {
+  // 如果是"不限"或已经是中文，直接返回
+  if (location === '不限' || /[\u4e00-\u9fa5]/.test(location)) return location;
+  
+  // 防止出现undefined或null
+  if (!location) return '未知地点';
+  
+  return location;
+};
+
+// 处理职位标签
+const getJobTags = (tagsString) => {
+  // 如果有标签列表，直接使用
+  if (tagsString && Array.isArray(tagsString)) {
+    return tagsString;
+  }
+  
+  // 如果是字符串，拆分为数组
+  if (tagsString && typeof tagsString === 'string') {
+    return tagsString.split(',').filter(tag => tag.trim() !== '');
+  }
+  
+  return [];
+};
+
 // 从API获取职位数据
 const fetchJobs = async () => {
   loading.value = true;
@@ -173,12 +290,22 @@ const fetchJobs = async () => {
     const response = await jobService.getJobs(params);
     jobs.value = response.results || [];
     totalCount.value = response.count || 0;
+    
+    // 控制台输出，便于调试
+    console.log('获取到的职位数据:', jobs.value);
   } catch (err) {
     console.error('获取职位数据失败:', err);
     error.value = '获取职位数据失败，请稍后重试';
   } finally {
     loading.value = false;
   }
+};
+
+// 申请职位
+const applyForJob = (job) => {
+  // 这里可以实现跳转到申请页面或打开申请表单
+  alert(`您正在应聘"${job.title}"职位，稍后将跳转到应聘页面`);
+  // router.push({ name: 'jobApplication', params: { id: job.id } });
 };
 
 // 监听筛选条件和排序方式变化，重新获取数据
@@ -191,7 +318,6 @@ watch([filterConditions, sortBy], () => {
 watch(currentPage, () => {
   fetchJobs();
 });
-
 
 // 时间格式化
 const formatTimeAgo = (dateString) => {
@@ -227,16 +353,15 @@ const totalPages = computed(() => {
   return Math.ceil(totalCount.value / pageSize) || 1;
 });
 
-
 // 重置筛选条件
 const resetFilters = () => {
   filterConditions.value = {
-    industry: 'internet',
-    location: 'beijing',
+    category: 'any', // 不限职位类别
+    location: '不限', // 不限地理位置
     salary: 'any',
     experience: 'any',
     education: 'any',
-    urgency: 'any'
+    urgency: 'normal'
   };
   sortBy.value = 'latest';
   currentPage.value = 1;
@@ -249,9 +374,67 @@ const handleFilterChange = (filters) => {
   currentPage.value = 1;
 };
 
+// 判断是否有激活的筛选条件
+const hasActiveFilters = computed(() => {
+  return filterConditions.value.category !== 'any' ||
+         filterConditions.value.location !== '不限' ||
+         filterConditions.value.salary !== 'any' ||
+         filterConditions.value.experience !== 'any' ||
+         filterConditions.value.education !== 'any';
+});
+
+// 清除单个筛选条件
+const clearFilter = (filterName) => {
+  if (Object.prototype.hasOwnProperty.call(filterConditions.value, filterName)) {
+    if (filterName === 'urgency') {
+      filterConditions.value[filterName] = 'normal';
+    } else if (filterName === 'location') {
+      filterConditions.value[filterName] = '不限';
+    } else {
+      filterConditions.value[filterName] = 'any';
+    }
+  }
+};
+
+// 获取薪资范围的显示文本
+const getSalaryLabel = (value) => {
+  const salaryMap = {
+    'any': '不限',
+    '0-25': '0-25K',
+    '25-100': '25K-100K',
+    '100+': '100K+'
+  };
+  return salaryMap[value] || value;
+};
+
+// 获取经验要求的显示文本
+const getExperienceLabel = (value) => {
+  const experienceMap = {
+    'any': '经验不限',
+    '0-3': '3年及以下',
+    '3-5': '3-5年',
+    '5-10': '5-10年',
+    '10+': '10年以上'
+  };
+  return experienceMap[value] || value;
+};
+
+// 获取学历要求的显示文本
+const getEducationLabel = (value) => {
+  const educationMap = {
+    'any': '学历不限',
+    'college': '大专',
+    'bachelor': '本科',
+    'master': '硕士',
+    'phd': '博士'
+  };
+  return educationMap[value] || value;
+};
+
 // 初始化
-onMounted(() => {
-  fetchJobs();
+onMounted(async () => {
+  await fetchJobCategories();
+  await fetchJobs();
 });
 </script>
 
@@ -315,6 +498,68 @@ onMounted(() => {
 .highlight {
   color: #2c6e49;
   font-weight: bold;
+}
+
+.active-filters {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  color: #666;
+  margin: 15px 0;
+}
+
+.filter-label {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.filter-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.filter-chip {
+  background-color: #f0f8f4;
+  color: #2c6e49;
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.clear-filter {
+  background: none;
+  border: none;
+  color: #999;
+  cursor: pointer;
+  padding: 0 0 0 5px;
+  font-size: 16px;
+  outline: inherit;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clear-filter:hover {
+  color: #e53935;
+}
+
+.clear-all-filters {
+  background-color: #f5f5f5;
+  border: 1px solid #ddd;
+  color: #666;
+  font-size: 13px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+}
+
+.clear-all-filters:hover {
+  background-color: #eeeeee;
 }
 
 .sort-options {
@@ -572,5 +817,40 @@ onMounted(() => {
   .apply-button {
     padding: 8px 20px;
   }
+}
+
+.empty-state {
+  padding: 40px;
+  text-align: center;
+  color: #666;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.filter-tip {
+  margin-top: 20px;
+  color: #888;
+}
+
+.filter-suggestions {
+  list-style-type: none;
+  padding: 0;
+  margin: 15px 0;
+  text-align: left;
+  display: inline-block;
+}
+
+.filter-suggestions li {
+  margin: 8px 0;
+  padding-left: 20px;
+  position: relative;
+}
+
+.filter-suggestions li:before {
+  content: "•";
+  position: absolute;
+  left: 0;
+  color: #2c6e49;
 }
 </style>

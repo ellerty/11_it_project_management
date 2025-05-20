@@ -43,6 +43,8 @@ INSTALLED_APPS = [
     "rest_framework",
     "user_management",
     "job_recommendation", 
+    "task_communication",
+    "contract_payment",
 ]
 
 MIDDLEWARE = [
@@ -161,6 +163,7 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
     ],
+    'EXCEPTION_HANDLER': 'rest_framework.views.exception_handler',
 }
 
 # JWT设置
@@ -205,3 +208,32 @@ CORS_ALLOW_HEADERS = [
 
 # 允许凭据（Cookies等）
 CORS_ALLOW_CREDENTIALS = True
+
+# 日志配置
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {message}',
+            'style': '{',
+        },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+        },
+        'django.request': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}

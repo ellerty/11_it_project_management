@@ -170,6 +170,7 @@ export const isAuthenticated = (): boolean => {
  */
 export const getUserProfile = async (): Promise<User> => {
   try {
+    // 使用GET请求获取用户资料
     const response = await api.get('auth/profile/');
     
     return response.data;
