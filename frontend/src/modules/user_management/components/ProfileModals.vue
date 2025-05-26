@@ -205,8 +205,8 @@
 
 <script setup>
 import { ref, reactive, defineProps, defineEmits, watchEffect } from 'vue';
-import { updateUserProfile } from '../../../../services/authService';
-import api from '../../../../services/api';
+import { updateUserProfile } from '../../../services/authService';
+import api from '../../../services/api';
 
 const props = defineProps({
   userProfile: {

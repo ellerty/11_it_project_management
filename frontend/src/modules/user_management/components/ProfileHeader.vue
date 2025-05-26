@@ -53,7 +53,7 @@
 
 <script setup>
 import { defineProps, defineEmits } from 'vue';
-import avatarService from '../../../../services/avatarService';
+import avatarService from '../../../services/avatarService';
 
 const props = defineProps({
   userProfile: {
