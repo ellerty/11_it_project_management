@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from rest_framework import status, permissions
+from rest_framework import status, permissions, generics
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated, AllowAny
@@ -7,8 +7,15 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
-from .models import User
-from .serializers import UserSerializer, UserProfileUpdateSerializer, UserRegistrationSerializer
+from django.utils import timezone
+from .models import (User, UserCertificate, UserExperience, 
+                    IdentityVerification, Company, CompanyCertificate, 
+                    RecruitmentPreference)
+from .serializers import (UserSerializer, UserProfileUpdateSerializer, 
+                        UserRegistrationSerializer, UserCertificateSerializer,
+                        UserExperienceSerializer, IdentityVerificationSerializer,
+                        CompanySerializer, CompanyCertificateSerializer,
+                        RecruitmentPreferenceSerializer)
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -145,7 +152,6 @@ def get_user_profile(request):
     serializer = UserSerializer(user)
     return Response(serializer.data)
 
-
 class UserAvatarUploadView(APIView):
     """
     用户头像上传视图
@@ -162,6 +168,271 @@ class UserAvatarUploadView(APIView):
         
         # 更新用户头像
         user.avatar = request.data['avatar']
+        user.save()
+        
+        # 返回更新后的用户信息
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+
+# 新增视图类
+
+class UserCertificateView(generics.ListCreateAPIView):
+    """用户证书视图 - 处理证书列表和添加"""
+    serializer_class = UserCertificateSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+    
+    def get_queryset(self):
+        """只返回当前用户的证书"""
+        return UserCertificate.objects.filter(user=self.request.user)
+    
+    def create(self, request, *args, **kwargs):
+        """创建新证书前验证文件类型"""
+        # 检查文件是否存在
+        if 'certificate_file' not in request.FILES:
+            return Response({'error': '请上传证书文件'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 验证文件类型
+        certificate_file = request.FILES['certificate_file']
+        file_extension = certificate_file.name.split('.')[-1].lower()
+        
+        allowed_extensions = ['pdf', 'jpg', 'jpeg', 'png']
+        if file_extension not in allowed_extensions:
+            return Response({'error': '只支持PDF、JPG、PNG格式文件'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 验证文件大小
+        if certificate_file.size > 5 * 1024 * 1024:  # 5MB
+            return Response({'error': '文件大小不能超过5MB'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return super().create(request, *args, **kwargs)
+
+class UserCertificateDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """用户证书详情视图 - 处理证书详情、更新和删除"""
+    serializer_class = UserCertificateSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+    
+    def get_queryset(self):
+        """只允许操作当前用户的证书"""
+        return UserCertificate.objects.filter(user=self.request.user)
+
+class UserExperienceView(generics.ListCreateAPIView):
+    """工作经历视图 - 处理工作经历列表和添加"""
+    serializer_class = UserExperienceSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """只返回当前用户的工作经历"""
+        return UserExperience.objects.filter(user=self.request.user)
+
+class UserExperienceDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """工作经历详情视图 - 处理经历详情、更新和删除"""
+    serializer_class = UserExperienceSerializer
+    permission_classes = [IsAuthenticated]
+    
+    def get_queryset(self):
+        """只允许操作当前用户的工作经历"""
+        return UserExperience.objects.filter(user=self.request.user)
+
+class UserIdentityVerificationView(APIView):
+    """实名认证视图 - 处理用户实名认证"""
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, format=None):
+        """创建或更新实名认证信息"""
+        user = request.user
+        
+        # 检查是否已有认证记录
+        try:
+            verification = IdentityVerification.objects.get(user=user)
+            # 如果已经认证通过，不允许再次修改
+            if verification.verify_status == 'verified':
+                return Response({'error': '您已完成实名认证，无法修改'}, status=status.HTTP_400_BAD_REQUEST)
+            # 如果正在审核中，也不允许修改
+            if verification.verify_status == 'pending':
+                return Response({'error': '您的认证正在审核中，请等待结果'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 如果是被拒绝状态，可以重新提交
+            serializer = IdentityVerificationSerializer(verification, data=request.data)
+        except IdentityVerification.DoesNotExist:
+            # 创建新的认证记录
+            serializer = IdentityVerificationSerializer(data=request.data, context={'request': request})
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def get(self, request, format=None):
+        """获取当前用户的实名认证状态"""
+        user = request.user
+        try:
+            verification = IdentityVerification.objects.get(user=user)
+            serializer = IdentityVerificationSerializer(verification)
+            return Response(serializer.data)
+        except IdentityVerification.DoesNotExist:
+            return Response({'status': 'unverified'}, status=status.HTTP_404_NOT_FOUND)
+
+class CompanyInfoView(APIView):
+    """企业信息视图 - 处理企业信息的创建和更新"""
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, format=None):
+        """获取当前用户的企业信息"""
+        user = request.user
+        try:
+            company = Company.objects.get(user=user)
+            serializer = CompanySerializer(company)
+            return Response(serializer.data)
+        except Company.DoesNotExist:
+            return Response({'error': '未找到企业信息'}, status=status.HTTP_404_NOT_FOUND)
+    
+    def put(self, request, format=None):
+        """更新企业信息"""
+        user = request.user
+        
+        # 验证用户是否为雇主
+        if user.role != 'employer':
+            return Response({'error': '只有招聘用户才能管理企业信息'}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            company = Company.objects.get(user=user)
+            serializer = CompanySerializer(company, data=request.data, partial=True)
+        except Company.DoesNotExist:
+            # 创建新的企业信息
+            serializer = CompanySerializer(data=request.data, context={'request': request})
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class CompanyDescriptionView(APIView):
+    """企业简介视图 - 只更新企业描述部分"""
+    permission_classes = [IsAuthenticated]
+    
+    def put(self, request, format=None):
+        """更新企业简介"""
+        user = request.user
+        
+        # 验证用户是否为雇主
+        if user.role != 'employer':
+            return Response({'error': '只有招聘用户才能管理企业信息'}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            company = Company.objects.get(user=user)
+            company.description = request.data.get('description', '')
+            company.save()
+            serializer = CompanySerializer(company)
+            return Response(serializer.data)
+        except Company.DoesNotExist:
+            return Response({'error': '请先创建企业信息'}, status=status.HTTP_404_NOT_FOUND)
+
+class CompanyCertificateView(generics.ListCreateAPIView):
+    """企业资质证书视图 - 处理证书列表和添加"""
+    serializer_class = CompanyCertificateSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+    
+    def get_queryset(self):
+        """只返回当前用户企业的证书"""
+        try:
+            company = self.request.user.company
+            return CompanyCertificate.objects.filter(company=company)
+        except Company.DoesNotExist:
+            return CompanyCertificate.objects.none()
+    
+    def create(self, request, *args, **kwargs):
+        """创建新企业证书前验证文件类型"""
+        # 检查文件是否存在
+        if 'certificate_file' not in request.FILES:
+            return Response({'error': '请上传证书文件'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 验证文件类型
+        certificate_file = request.FILES['certificate_file']
+        file_extension = certificate_file.name.split('.')[-1].lower()
+        
+        allowed_extensions = ['pdf', 'jpg', 'jpeg', 'png']
+        if file_extension not in allowed_extensions:
+            return Response({'error': '只支持PDF、JPG、PNG格式文件'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 验证文件大小
+        if certificate_file.size > 5 * 1024 * 1024:  # 5MB
+            return Response({'error': '文件大小不能超过5MB'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        return super().create(request, *args, **kwargs)
+
+class CompanyCertificateDetailView(generics.RetrieveUpdateDestroyAPIView):
+    """企业资质证书详情视图 - 处理证书详情、更新和删除"""
+    serializer_class = CompanyCertificateSerializer
+    permission_classes = [IsAuthenticated]
+    parser_classes = (MultiPartParser, FormParser)
+    
+    def get_queryset(self):
+        """只允许操作当前用户企业的证书"""
+        try:
+            company = self.request.user.company
+            return CompanyCertificate.objects.filter(company=company)
+        except Company.DoesNotExist:
+            return CompanyCertificate.objects.none()
+
+class RecruitmentPreferencesView(APIView):
+    """招聘偏好设置视图 - 处理招聘偏好的创建和更新"""
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, format=None):
+        """获取当前用户的招聘偏好设置"""
+        user = request.user
+        
+        # 验证用户是否为雇主
+        if user.role != 'employer':
+            return Response({'error': '只有招聘用户才能设置招聘偏好'}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            preference = RecruitmentPreference.objects.get(user=user)
+            serializer = RecruitmentPreferenceSerializer(preference)
+            return Response(serializer.data)
+        except RecruitmentPreference.DoesNotExist:
+            return Response({'error': '未找到招聘偏好设置'}, status=status.HTTP_404_NOT_FOUND)
+    
+    def put(self, request, format=None):
+        """更新招聘偏好设置"""
+        user = request.user
+        
+        # 验证用户是否为雇主
+        if user.role != 'employer':
+            return Response({'error': '只有招聘用户才能设置招聘偏好'}, status=status.HTTP_403_FORBIDDEN)
+        
+        try:
+            preference = RecruitmentPreference.objects.get(user=user)
+            serializer = RecruitmentPreferenceSerializer(preference, data=request.data, partial=True)
+        except RecruitmentPreference.DoesNotExist:
+            # 创建新的招聘偏好设置
+            serializer = RecruitmentPreferenceSerializer(data=request.data, context={'request': request})
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class UserSwitchModeView(APIView):
+    """用户模式切换视图 - 处理用户角色切换"""
+    permission_classes = [IsAuthenticated]
+    
+    def put(self, request, format=None):
+        """切换用户角色"""
+        user = request.user
+        role = request.data.get('role')
+        
+        # 验证角色有效性
+        valid_roles = ['freelancer', 'employer']
+        if not role or role not in valid_roles:
+            return Response({'error': '无效的角色类型'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        # 更新用户角色
+        user.role = role
         user.save()
         
         # 返回更新后的用户信息
