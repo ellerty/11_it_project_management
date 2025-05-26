@@ -25,7 +25,7 @@ class UserProfileUpdateSerializer(serializers.ModelSerializer):
     """用户资料更新序列化器，仅允许更新特定字段"""
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'phone', 'bio', 'skills']
+        fields = ['username', 'email', 'first_name', 'last_name', 'phone', 'bio', 'skills']
 
 class UserRegistrationSerializer(serializers.ModelSerializer):
     """用户注册序列化器，处理用户注册信息"""

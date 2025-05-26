@@ -225,7 +225,24 @@ onMounted(async () => {
 
 // 处理用户资料更新
 const handleProfileUpdate = (updatedProfile) => {
+  console.log('接收到更新的用户资料:', updatedProfile);
+  
+  // 更新组件状态
   Object.assign(userProfile, updatedProfile);
+  
+  // 确保localStorage中的用户信息也被更新
+  const currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+  if (currentUser) {
+    // 更新基本属性
+    if (updatedProfile.username) currentUser.username = updatedProfile.username;
+    if (updatedProfile.email) currentUser.email = updatedProfile.email;
+    if (updatedProfile.phone) currentUser.phone = updatedProfile.phone;
+    if (updatedProfile.bio) currentUser.bio = updatedProfile.bio;
+    
+    // 保存回localStorage
+    localStorage.setItem('user', JSON.stringify(currentUser));
+    console.log('已更新localStorage中的用户信息:', currentUser);
+  }
 };
 
 // 查看证书

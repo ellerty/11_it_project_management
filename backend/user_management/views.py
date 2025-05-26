@@ -138,8 +138,10 @@ def update_user_profile(request):
         serializer.save()
         # 返回更新后的完整用户信息
         user_serializer = UserSerializer(user)
+        print(f"用户资料已更新: {user.username}")
         return Response(user_serializer.data)
     
+    print(f"用户资料更新失败: {serializer.errors}")
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 @api_view(['GET'])

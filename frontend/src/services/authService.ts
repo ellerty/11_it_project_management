@@ -171,7 +171,7 @@ export const isAuthenticated = (): boolean => {
 export const getUserProfile = async (): Promise<User> => {
   try {
     // 使用GET请求获取用户资料
-    const response = await api.get('auth/profile/');
+    const response = await api.get('auth/profile/get/');
     
     return response.data;
   } catch (error) {
@@ -193,7 +193,12 @@ export const getUserProfile = async (): Promise<User> => {
  */
 export const updateUserProfile = async (userProfile: Partial<User>): Promise<User> => {
   try {
+    console.log('发送更新用户资料请求:', userProfile);
+    
+    // 使用正确的路径和方法 - PUT而不是POST
     const response = await api.put('auth/profile/', userProfile);
+    
+    console.log('更新用户资料响应:', response.data);
     
     // 更新本地存储的用户信息
     const currentUser = getCurrentUser();
@@ -201,7 +206,11 @@ export const updateUserProfile = async (userProfile: Partial<User>): Promise<Use
       throw new Error('用户未登录');
     }
     
-    const updatedUser = { ...currentUser, ...response.data };
+    // 将新数据合并到当前用户数据中
+    const updatedUser = { ...currentUser, ...userProfile };
+    console.log('更新后的用户数据:', updatedUser);
+    
+    // 保存到localStorage
     localStorage.setItem('user', JSON.stringify(updatedUser));
     
     return updatedUser;
@@ -209,6 +218,13 @@ export const updateUserProfile = async (userProfile: Partial<User>): Promise<Use
     console.error('更新用户信息失败:', error);
     
     if (isAxiosError(error)) {
+      console.error('API错误详情:', {
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        headers: error.response?.headers,
+      });
+      
       const errorMsg = error.response?.data?.error || 
                       error.response?.data?.message || 
                       error.response?.data?.detail ||

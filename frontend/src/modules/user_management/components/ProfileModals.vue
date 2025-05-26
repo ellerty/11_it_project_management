@@ -207,6 +207,7 @@
 import { ref, reactive, defineProps, defineEmits, watchEffect } from 'vue';
 import { updateUserProfile } from '../../../services/authService';
 import api from '../../../services/api';
+import { authStore } from '../../../store/authStore';
 
 const props = defineProps({
   userProfile: {
@@ -309,13 +310,28 @@ const saveBasicInfo = async () => {
       phone: editingProfile.phone
     };
     
+    console.log('准备更新用户资料:', profileData);
+    
     // 调用API保存到数据库
-    await updateUserProfile(profileData);
+    const updatedProfile = await updateUserProfile(profileData);
+    
+    console.log('API返回的更新后资料:', updatedProfile);
     
     // 更新本地状态
     props.userProfile.username = editingProfile.username;
     props.userProfile.email = editingProfile.email;
     props.userProfile.phone = editingProfile.phone;
+    
+    // 同步更新authStore
+    try {
+      await authStore.updateProfile(profileData);
+    } catch (error) {
+      console.error('authStore更新失败，但API调用成功:', error);
+    }
+    
+    // 确保authStore中的用户信息也被更新
+    const storedUser = JSON.parse(localStorage.getItem('user') || '{}');
+    console.log('更新前的localStorage用户信息:', storedUser);
     
     // 通知父组件更新
     emits('update:userProfile', { ...props.userProfile });
@@ -327,7 +343,7 @@ const saveBasicInfo = async () => {
     alert('基本信息保存成功');
   } catch (error) {
     console.error('保存基本信息失败:', error);
-    alert('保存失败，请稍后重试');
+    alert('保存失败，请稍后重试: ' + (error instanceof Error ? error.message : '未知错误'));
   }
 };
 
