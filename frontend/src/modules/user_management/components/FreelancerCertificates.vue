@@ -9,9 +9,9 @@
         <div v-for="(cert, index) in certificates" :key="index" class="cert-item">
           <div class="cert-info">
             <div class="cert-name">{{ cert.name }}</div>
-            <div class="cert-date">获得日期: {{ formatDate(cert.issueDate) }}</div>
-            <div :class="['cert-status', getCertStatusClass(cert.verifyStatus)]">
-              {{ getCertStatusText(cert.verifyStatus) }}
+            <div class="cert-date">获得日期: {{ formatDate(cert.issue_date || cert.issueDate) }}</div>
+            <div :class="['cert-status', getCertStatusClass(cert.verify_status || cert.verifyStatus)]">
+              {{ getCertStatusText(cert.verify_status || cert.verifyStatus) }}
             </div>
           </div>
           <div class="cert-actions">
@@ -27,9 +27,9 @@
 </template>
 
 <script setup>
-import { defineProps, defineEmits } from 'vue';
+import { defineProps, defineEmits, onMounted } from 'vue';
 
-defineProps({
+const props = defineProps({
   certificates: {
     type: Array,
     default: () => []
@@ -41,6 +41,17 @@ defineEmits(['add-certificate', 'view-certificate']);
 // 格式化日期
 const formatDate = (dateStr) => {
   if (!dateStr) return '未设置';
+  
+  // 转换日期格式为本地显示
+  try {
+    const date = new Date(dateStr);
+    if (!isNaN(date.getTime())) {
+      return date.toLocaleDateString('zh-CN');
+    }
+  } catch (e) {
+    console.error('日期格式化错误:', e);
+  }
+  
   return dateStr;
 };
 
@@ -62,6 +73,10 @@ const getCertStatusText = (status) => {
     default: return '未知状态';
   }
 };
+
+onMounted(() => {
+  console.log("证书数据:", props.certificates);
+});
 </script>
 
 <style scoped>
