@@ -44,6 +44,21 @@ const jobService = {
       throw error;
     }
   },
+  
+  /**
+   * 申请职位
+   * @param jobId 职位ID
+   * @returns 申请结果
+   */
+  applyForJob: async (jobId: number) => {
+    try {
+      const response = await api.post('/job-recommendation/apply/', { job_id: jobId });
+      return response.data;
+    } catch (error) {
+      console.error('申请职位失败:', error);
+      throw error;
+    }
+  },
 
   /**
    * 获取职位类别

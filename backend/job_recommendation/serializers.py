@@ -9,6 +9,7 @@ class JobCategorySerializer(serializers.ModelSerializer):
 class JobSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     tags_list = serializers.SerializerMethodField()
+    publisher_id = serializers.PrimaryKeyRelatedField(source='publisher', read_only=True)
     
     class Meta:
         model = Job
@@ -16,7 +17,8 @@ class JobSerializer(serializers.ModelSerializer):
             'id', 'title', 'company', 'category', 'category_name',
             'description', 'requirements', 'salary_min', 'salary_max',
             'location', 'created_at', 'updated_at', 'is_active',
-            'payment_cycle', 'urgency', 'experience', 'education', 'tags', 'tags_list'
+            'payment_cycle', 'urgency', 'experience', 'education', 'tags', 'tags_list',
+            'publisher_id'
         ]
     
     def get_tags_list(self, obj):
@@ -34,5 +36,10 @@ class JobSerializer(serializers.ModelSerializer):
                 validated_data['category'] = category
             except JobCategory.DoesNotExist:
                 raise serializers.ValidationError({'category': '无效的职位类别ID'})
+        
+        # 设置当前用户为职位发布者
+        request = self.context.get('request')
+        if request and hasattr(request, 'user') and request.user.is_authenticated:
+            validated_data['publisher'] = request.user
         
         return super().create(validated_data)

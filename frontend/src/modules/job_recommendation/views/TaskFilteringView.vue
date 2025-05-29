@@ -302,10 +302,36 @@ const fetchJobs = async () => {
 };
 
 // 申请职位
-const applyForJob = (job) => {
-  // 这里可以实现跳转到申请页面或打开申请表单
-  alert(`您正在应聘"${job.title}"职位，稍后将跳转到应聘页面`);
-  // router.push({ name: 'jobApplication', params: { id: job.id } });
+const applyForJob = async (job) => {
+  try {
+    // 发送用户简历申请
+    const response = await jobService.applyForJob(job.id);
+    
+    // 后端请求成功，直接显示成功消息并提示用户查看消息页面
+    alert(`申请成功！我们已经将您的简历发送给招聘方，请到消息页面查看回复。`);
+    
+    // 判断是否有聊天页面路由
+    try {
+      router.push({
+        name: 'messages'
+      });
+    } catch (routeError) {
+      console.log('路由跳转失败，继续停留在当前页面');
+      // 如果没有对应路由，保持在当前页面
+    }
+  } catch (error) {
+    console.error('申请职位失败:', error);
+    
+    // 判断错误类型并给出对应提示
+    if (error.response && error.response.status === 401) {
+      alert('请先登录后再申请职位');
+    } else if (error.response && error.response.status === 400 && error.response.data.error === 'resume_missing') {
+      alert('您尚未创建简历，请先完善个人资料');
+      router.push({ name: 'profile' });
+    } else {
+      alert('申请失败，请稍后重试');
+    }
+  }
 };
 
 // 监听筛选条件和排序方式变化，重新获取数据

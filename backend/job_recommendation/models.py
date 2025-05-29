@@ -22,6 +22,15 @@ class Job(models.Model):
         ('project', '项目计价'),
     )
     
+    # 添加发布者字段
+    publisher = models.ForeignKey(
+        settings.AUTH_USER_MODEL, 
+        on_delete=models.CASCADE, 
+        related_name="published_jobs", 
+        verbose_name="发布者",
+        null=True  # 允许为空以便兼容现有数据
+    )
+    
     URGENCY_CHOICES = (
         ('normal', '普通'),
         ('urgent', '紧急'),
@@ -81,7 +90,7 @@ class JobApplication(models.Model):
     
     job = models.ForeignKey(Job, on_delete=models.CASCADE, related_name="applications", verbose_name="申请职位")
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="job_applications", verbose_name="申请者")
-    resume = models.FileField(upload_to='resumes/', verbose_name="简历")
+    resume = models.FileField(upload_to='resumes/', verbose_name="简历", blank=True, null=True)
     cover_letter = models.TextField(blank=True, null=True, verbose_name="求职信")
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending', verbose_name="状态")
     applied_at = models.DateTimeField(auto_now_add=True, verbose_name="申请时间")

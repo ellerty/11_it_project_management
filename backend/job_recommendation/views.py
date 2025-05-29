@@ -1,10 +1,13 @@
 from rest_framework import viewsets, filters, status
 from rest_framework.response import Response
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, permission_classes
 from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
-from .models import Job, JobCategory
+from .models import Job, JobCategory, JobApplication
 from .serializers import JobSerializer, JobCategorySerializer
+from django.shortcuts import get_object_or_404
+from task_communication.models import Message
 
 class CustomPagination(PageNumberPagination):
     page_size = 10
@@ -120,3 +123,60 @@ class JobViewSet(viewsets.ModelViewSet):
 class JobCategoryViewSet(viewsets.ModelViewSet):
     queryset = JobCategory.objects.all()
     serializer_class = JobCategorySerializer
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def apply_for_job(request):
+    """
+    申请职位并发送消息通知
+    """
+    job_id = request.data.get('job_id')
+    if not job_id:
+        return Response({"error": "缺少职位ID"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # 获取职位信息
+    job = get_object_or_404(Job, id=job_id)
+    
+    # 检查用户是否已有简历资料 (简化判断，实际需要根据业务调整)
+    user = request.user
+    
+    # 获取发布者用户（假设Job模型与User有关联）
+    publisher = None
+    if hasattr(job, 'publisher') and job.publisher:
+        publisher = job.publisher
+    else:
+        # 如果职位没有关联发布者，使用系统默认管理员
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        try:
+            publisher = User.objects.get(is_superuser=True, is_staff=True)
+        except User.DoesNotExist:
+            publisher = User.objects.filter(is_staff=True).first()
+            
+    # 如果找不到接收者，返回错误
+    if not publisher:
+        return Response({"error": "无法确定职位发布者"}, status=status.HTTP_400_BAD_REQUEST)
+    
+    # 创建职位申请记录
+    job_application = JobApplication(
+        job=job,
+        user=user,
+        status='pending'
+    )
+    job_application.save()
+    
+    # 发送消息通知
+    message = Message(
+        sender=user,
+        receiver=publisher,
+        subject=f"应聘职位: {job.title}",
+        content=f"您好，我对《{job.title}》职位很感兴趣，请查看我的简历。",
+    )
+    message.save()
+    
+    return Response({
+        "success": True,
+        "message": "职位申请已发送",
+        "job_application_id": job_application.id
+    }, status=status.HTTP_201_CREATED)

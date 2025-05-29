@@ -8,4 +8,5 @@ router.register(r'job-categories', views.JobCategoryViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('apply/', views.apply_for_job, name='apply_for_job'),
 ]
