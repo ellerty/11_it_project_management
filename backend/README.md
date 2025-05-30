@@ -7,53 +7,37 @@
 - Django CORS Headers 4.7.0
 - 其他依赖见 requirements.txt
 
-## 环境配置
 
-### 1. 创建虚拟环境（如果尚未创建）
+
+## 快速启动操作步骤
+
+1. 进入后端目录
 ```bash
-python -m venv venv
+cd backend
 ```
 
-### 2. 激活虚拟环境
+2. 激活虚拟环境
 ```bash
 # Linux/Mac
+source backend/venv/bin/activate
+# 或直接
 source venv/bin/activate
 
 # Windows
+backend\venv\Scripts\activate
+# 或直接
 venv\Scripts\activate
 ```
 
-### 3. 安装依赖
-```bash
-pip install -r requirements.txt
-```
-
-## 数据库配置
-
-项目默认使用SQLite数据库，数据库文件为db.sqlite3。如需使用其他数据库，请修改numcheck/settings.py中的数据库配置。
-
-### 1. 执行数据库迁移
-```bash
-python manage.py migrate
-```
-
-### 2. 创建超级用户（可选）
-```bash
-python manage.py createsuperuser
-```
-
-## 启动服务器
-
-### 开发环境启动
+3. 启动服务器
 ```bash
 python manage.py runserver
 ```
-默认服务器将在 http://127.0.0.1:8000/ 启动
 
-### 指定IP和端口启动
-```bash
-python manage.py runserver 0.0.0.0:8000
-```
+4. 访问管理界面
+   - 在浏览器中打开 http://127.0.0.1:8000/admin
+   - 登录账号：admin
+   - 登录密码：@11itproject
 
 ## API文档
 
@@ -71,4 +55,4 @@ python manage.py migrate
 
 2. 如需重置数据库，可删除db.sqlite3文件并重新执行迁移命令。
 
-3. 确保CORS设置正确，以便前端能够正常访问API。 
+3. 确保CORS设置正确，以便前端能够正常访问API。
