@@ -9,6 +9,32 @@
 - 数据库：MySQL 8.0 + Redis缓存
 - 部署：Docker + Nginx
 
+## 环境要求
+### 前端环境
+- Node.js: v18.x 或更高版本
+- npm: v9.x 或更高版本
+
+### 服务器安装Node.js
+```bash
+# 使用NVM安装Node.js（推荐）
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc  # 或 source ~/.zshrc
+nvm install 18    # 安装Node.js 18.x版本
+nvm use 18        # 使用Node.js 18.x版本
+
+# 或使用apt安装（Ubuntu/Debian）
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# 验证安装
+node -v
+npm -v
+```
+
+## 管理员账户
+- 用户名: admin
+- 密码: @11itproject
+
 ## 目录结构
 ```
 ├── frontend/     # 前端工程
@@ -28,9 +54,17 @@ npm install
 npm run dev
 
 # 后端启动
+## 本地环境
 cd backend
 pip install -r requirements.txt
 python manage.py runserver
+
+## 服务器环境
+cd backend
+source /var/www/itproject/11_it_project_management/backend/venv/bin/activate
+python3 manage.py runserver
+# 如需允许外部访问（通过服务器IP）
+python3 manage.py runserver 0.0.0.0:8000
 ```
 
 ## 部署说明
