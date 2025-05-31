@@ -3,368 +3,253 @@
     <div class="resume-container">
       <h1 class="resume-title">我的简历</h1>
       
-      <!-- 基本信息部分 -->
-      <div class="resume-section">
-        <h2 class="section-title">基本信息</h2>
-        <div class="form-group">
-          <label class="form-label">姓名</label>
-          <input 
-            type="text" 
-            class="form-control" 
-            v-model="resume.basicInfo.name" 
-            placeholder="请输入姓名"
-          />
+      <!-- 简历上传部分 -->
+      <div class="resume-section pdf-upload-section">
+        <h2 class="section-title">简历附件上传</h2>
+        <div v-if="isLoading" class="loading-indicator">
+          <span>加载中...</span>
         </div>
-        
-        <div class="form-group">
-          <label class="form-label">联系方式</label>
-          <input 
-            type="tel" 
-            class="form-control" 
-            v-model="resume.basicInfo.phone" 
-            placeholder="请输入手机号码"
-          />
-        </div>
-        
-        <div class="form-group">
-          <label class="form-label">电子邮箱</label>
-          <input 
-            type="email" 
-            class="form-control" 
-            v-model="resume.basicInfo.email" 
-            placeholder="请输入电子邮箱"
-          />
-        </div>
-      </div>
-      
-      <!-- 个人评价部分 -->
-      <PersonalEvaluation 
-        title="个人评价" 
-        :initial-value="resume.evaluation" 
-        @save="handleEvaluationSave"
-      />
-      
-      <!-- 工作经历部分 -->
-      <div class="resume-section">
-        <h2 class="section-title">工作经历</h2>
-        <div 
-          v-for="(exp, index) in resume.experiences" 
-          :key="index" 
-          class="experience-item"
-        >
-          <div class="form-group">
-            <label class="form-label">公司名称</label>
-            <input 
-              type="text" 
-              class="form-control" 
-              v-model="exp.company" 
-              placeholder="请输入公司名称"
-            />
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">职位</label>
-            <input 
-              type="text" 
-              class="form-control" 
-              v-model="exp.position" 
-              placeholder="请输入职位"
-            />
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">工作时间</label>
-            <div class="date-range">
-              <input 
-                type="text" 
-                class="form-control" 
-                v-model="exp.startDate" 
-                placeholder="开始时间"
-              />
-              <span>至</span>
-              <input 
-                type="text" 
-                class="form-control" 
-                v-model="exp.endDate" 
-                placeholder="结束时间"
-              />
+        <div v-else class="pdf-resume-container">
+          <div v-if="resume.pdfUrl" class="uploaded-resume">
+            <div class="pdf-info">
+              <i class="pdf-icon">📄</i>
+              <span class="pdf-name">已上传的简历</span>
+            </div>
+            <div class="pdf-actions">
+              <button class="btn btn-secondary" @click="viewResume">查看</button>
+              <button class="btn btn-primary" @click="triggerFileInput">重新上传</button>
             </div>
           </div>
-          
-          <div class="form-group">
-            <label class="form-label">工作描述</label>
-            <textarea 
-              class="form-control" 
-              v-model="exp.description" 
-              placeholder="请输入工作描述"
-              rows="3"
-            ></textarea>
-          </div>
-          
-          <button 
-            type="button" 
-            class="btn btn-danger" 
-            @click="removeExperience(index)"
-          >
-            删除
-          </button>
-        </div>
-        
-        <button 
-          type="button" 
-          class="btn btn-secondary" 
-          @click="addExperience"
-        >
-          添加工作经历
-        </button>
-      </div>
-      
-      <!-- 教育背景部分 -->
-      <div class="resume-section">
-        <h2 class="section-title">教育背景</h2>
-        <div 
-          v-for="(edu, index) in resume.educations" 
-          :key="index" 
-          class="education-item"
-        >
-          <div class="form-group">
-            <label class="form-label">学校名称</label>
-            <input 
-              type="text" 
-              class="form-control" 
-              v-model="edu.school" 
-              placeholder="请输入学校名称"
+          <div v-else class="upload-area">
+            <input
+              type="file"
+              ref="fileInput"
+              class="file-input"
+              accept="application/pdf"
+              @change="handleFileUpload"
+              style="display: none"
             />
+            <button class="btn btn-primary upload-button" 
+                    @click="triggerFileInput" 
+                    :disabled="isUploading">
+              <i class="upload-icon">{{ isUploading ? '⏳' : '📤' }}</i>
+              <span>{{ isUploading ? '上传中...' : '上传简历' }}</span>
+            </button>
+            <p class="upload-tip">支持PDF格式，文件大小不超过5MB</p>
           </div>
-          
-          <div class="form-group">
-            <label class="form-label">专业</label>
-            <input 
-              type="text" 
-              class="form-control" 
-              v-model="edu.major" 
-              placeholder="请输入专业"
-            />
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">学历</label>
-            <select class="form-control" v-model="edu.degree">
-              <option value="本科">本科</option>
-              <option value="硕士">硕士</option>
-              <option value="博士">博士</option>
-              <option value="大专">大专</option>
-              <option value="其他">其他</option>
-            </select>
-          </div>
-          
-          <div class="form-group">
-            <label class="form-label">在校时间</label>
-            <div class="date-range">
-              <input 
-                type="text" 
-                class="form-control" 
-                v-model="edu.startDate" 
-                placeholder="开始时间"
-              />
-              <span>至</span>
-              <input 
-                type="text" 
-                class="form-control" 
-                v-model="edu.endDate" 
-                placeholder="结束时间"
-              />
-            </div>
-          </div>
-          
-          <button 
-            type="button" 
-            class="btn btn-danger" 
-            @click="removeEducation(index)"
-          >
-            删除
-          </button>
         </div>
-        
-        <button 
-          type="button" 
-          class="btn btn-secondary" 
-          @click="addEducation"
-        >
-          添加教育背景
-        </button>
-      </div>
-      
-      <div class="form-actions">
-        <button 
-          type="button" 
-          class="btn btn-primary" 
-          @click="saveResume"
-          :disabled="isSaving"
-        >
-          {{ isSaving ? '保存中...' : '保存简历' }}
-        </button>
       </div>
     </div>
   </BaseLayout>
 </template>
 
 <script setup>
-import { ref, reactive } from 'vue';
+import { ref, reactive, onMounted } from 'vue';
 import BaseLayout from '../../../components/BaseLayout.vue';
-import PersonalEvaluation from '../components/PersonalEvaluation.vue';
+import resumeService from '../../../services/resumeService';
 
-const isSaving = ref(false);
+const isLoading = ref(false);
+const isUploading = ref(false);
+const fileInput = ref(null);
 
 const resume = reactive({
-  basicInfo: {
-    name: '',
-    phone: '',
-    email: ''
-  },
-  evaluation: '',
-  experiences: [],
-  educations: []
+  pdfUrl: null
 });
 
-const handleEvaluationSave = (content) => {
-  resume.evaluation = content;
-  console.log('个人评价已更新:', content);
-};
-
-const addExperience = () => {
-  resume.experiences.push({
-    company: '',
-    position: '',
-    startDate: '',
-    endDate: '',
-    description: ''
-  });
-};
-
-const removeExperience = (index) => {
-  resume.experiences.splice(index, 1);
-};
-
-const addEducation = () => {
-  resume.educations.push({
-    school: '',
-    major: '',
-    degree: '本科',
-    startDate: '',
-    endDate: ''
-  });
-};
-
-const removeEducation = (index) => {
-  resume.educations.splice(index, 1);
-};
-
-const saveResume = async () => {
-  isSaving.value = true;
-  
+// 加载现有简历
+const loadExistingResume = async () => {
+  isLoading.value = true;
   try {
-    // 这里应该有实际的API请求逻辑
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    console.log('简历保存成功', resume);
-    alert('简历保存成功');
+    const data = await resumeService.getResume();
+    resume.pdfUrl = data.pdf_url;
   } catch (error) {
-    console.error('保存简历失败:', error);
-    alert('保存失败，请稍后重试');
+    console.error('加载简历失败:', error);
   } finally {
-    isSaving.value = false;
+    isLoading.value = false;
   }
 };
+
+// 触发文件选择
+const triggerFileInput = () => {
+  fileInput.value.click();
+};
+
+// 处理文件上传
+const handleFileUpload = async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  
+  // 验证文件类型
+  if (file.type !== 'application/pdf') {
+    alert('请上传PDF格式的文件');
+    event.target.value = '';
+    return;
+  }
+  
+  // 验证文件大小（5MB）
+  if (file.size > 5 * 1024 * 1024) {
+    alert('文件大小不能超过5MB');
+    event.target.value = '';
+    return;
+  }
+  
+  isUploading.value = true;
+  try {
+    const response = await resumeService.uploadResume(file);
+    if (response && response.pdf_url) {
+      resume.pdfUrl = response.pdf_url;
+      alert('简历上传成功！');
+    } else {
+      throw new Error('上传响应格式错误');
+    }
+  } catch (error) {
+    console.error('上传简历失败:', error);
+    const errorMessage = error.response?.data?.error || error.message || '上传失败，请稍后重试';
+    alert(errorMessage);
+  } finally {
+    isUploading.value = false;
+    event.target.value = ''; // 清空文件输入
+  }
+};
+
+// 查看简历
+const viewResume = () => {
+  if (resume.pdfUrl) {
+    window.open(resume.pdfUrl, '_blank');
+  }
+};
+
+// 在组件挂载时加载简历
+onMounted(() => {
+  loadExistingResume();
+});
 </script>
 
 <style scoped>
 .resume-container {
   max-width: 800px;
-  margin: 2rem auto;
-  padding: 2rem;
-  background-color: var(--white);
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
+  margin: 0 auto;
+  padding: 20px;
 }
 
 .resume-title {
   text-align: center;
-  margin-bottom: 2rem;
-  color: var(--accent-color);
+  margin-bottom: 30px;
+  font-size: 24px;
+  color: #2c3e50;
 }
 
 .resume-section {
-  margin-bottom: 2rem;
-  padding-bottom: 1.5rem;
-  border-bottom: 1px solid var(--border-color);
+  background-color: #fff;
+  border-radius: 8px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .section-title {
-  margin-bottom: 1.5rem;
-  color: var(--accent-color);
+  font-size: 18px;
+  margin-bottom: 20px;
+  color: #2c3e50;
+  border-bottom: 2px solid #eee;
+  padding-bottom: 10px;
 }
 
-.form-group {
-  margin-bottom: 1.5rem;
+.loading-indicator {
+  text-align: center;
+  padding: 20px;
+  color: #666;
 }
 
-.form-label {
-  display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-}
-
-.form-control {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid var(--border-color);
-  border-radius: var(--border-radius);
-}
-
-.date-range {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.date-range span {
-  color: var(--text-light);
-}
-
-.btn {
-  padding: 0.75rem 1.5rem;
-  border: none;
-  border-radius: var(--border-radius);
-  cursor: pointer;
-  transition: all 0.3s;
-}
-
-.btn-primary {
-  background-color: var(--primary-color);
-  color: var(--white);
-}
-
-.btn-secondary {
-  background-color: var(--secondary-color);
-  color: var(--white);
-}
-
-.btn-danger {
-  background-color: var(--danger-color);
-  color: var(--white);
-}
-
-.form-actions {
-  margin-top: 2rem;
+.pdf-resume-container {
+  border: 2px dashed #ddd;
+  border-radius: 8px;
+  padding: 20px;
   text-align: center;
 }
 
-.experience-item,
-.education-item {
-  padding: 1.5rem;
-  margin-bottom: 1.5rem;
-  background-color: var(--bg-light);
-  border-radius: var(--border-radius);
+.uploaded-resume {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  background-color: #f8f9fa;
+  border-radius: 4px;
+}
+
+.pdf-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pdf-icon {
+  font-size: 24px;
+}
+
+.pdf-name {
+  font-size: 16px;
+  color: #2c3e50;
+}
+
+.pdf-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.upload-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+}
+
+.upload-button {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 15px 30px;
+}
+
+.upload-icon {
+  font-size: 24px;
+}
+
+.upload-tip {
+  margin-top: 10px;
+  font-size: 14px;
+  color: #666;
+}
+
+.btn {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.btn-secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: #545b62;
 }
 </style>

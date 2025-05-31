@@ -10,7 +10,7 @@ from django.contrib.auth import authenticate
 from django.utils import timezone
 from .models import (User, UserCertificate, UserExperience, 
                     IdentityVerification, Company, CompanyCertificate, 
-                    RecruitmentPreference)
+                    RecruitmentPreference, Resume)
 from .serializers import (UserSerializer, UserProfileUpdateSerializer, 
                         UserRegistrationSerializer, UserCertificateSerializer,
                         UserExperienceSerializer, IdentityVerificationSerializer,
@@ -440,3 +440,65 @@ class UserSwitchModeView(APIView):
         # 返回更新后的用户信息
         serializer = UserSerializer(user)
         return Response(serializer.data)
+
+class ResumeUploadView(APIView):
+    """简历上传视图 - 处理PDF简历的上传和更新"""
+    parser_classes = (MultiPartParser, FormParser)
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, format=None):
+        """获取用户当前的简历"""
+        try:
+            resume = Resume.objects.get(user=request.user)
+            return Response({
+                'pdf_url': request.build_absolute_uri(resume.pdf_file.url) if resume.pdf_file else None
+            })
+        except Resume.DoesNotExist:
+            return Response({
+                'pdf_url': None
+            })
+            
+    def post(self, request, format=None):
+        """上传或更新简历"""
+        try:
+            if 'pdf_file' not in request.FILES:
+                return Response({
+                    'error': '请提供PDF文件'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            file = request.FILES['pdf_file']
+            
+            # 验证文件类型
+            if not file.content_type == 'application/pdf':
+                return Response({
+                    'error': '只支持PDF格式文件'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 验证文件大小（5MB）
+            if file.size > 5 * 1024 * 1024:
+                return Response({
+                    'error': '文件大小不能超过5MB'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # 获取或创建简历记录
+            resume, created = Resume.objects.get_or_create(user=request.user)
+            
+            # 如果存在旧文件，删除它
+            if resume.pdf_file:
+                resume.pdf_file.delete()
+            
+            # 保存新文件
+            resume.pdf_file = file
+            resume.save()
+            
+            # 返回文件URL
+            return Response({
+                'pdf_url': request.build_absolute_uri(resume.pdf_file.url),
+                'message': '简历上传成功'
+            })
+            
+        except Exception as e:
+            print(f'简历上传错误: {str(e)}')  # 添加服务器端日志
+            return Response({
+                'error': f'上传失败: {str(e)}'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

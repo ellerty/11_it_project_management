@@ -14,6 +14,7 @@ urlpatterns = [
     path('experiences/', views.UserExperienceView.as_view(), name='user-experiences'),
     path('experiences/<int:pk>/', views.UserExperienceDetailView.as_view(), name='user-experience-detail'),
     path('verify/identity/', views.UserIdentityVerificationView.as_view(), name='user-verify-identity'),
+    path('resume/upload/', views.ResumeUploadView.as_view(), name='resume-upload'),
     path('company/info/', views.CompanyInfoView.as_view(), name='company-info'),
     path('company/description/', views.CompanyDescriptionView.as_view(), name='company-description'),
     path('company/certificates/', views.CompanyCertificateView.as_view(), name='company-certificates'),

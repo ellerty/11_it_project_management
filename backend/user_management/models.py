@@ -170,3 +170,17 @@ class RecruitmentPreference(models.Model):
         
     def __str__(self):
         return f"{self.user.username}的招聘偏好"
+
+class Resume(models.Model):
+    """用户简历模型"""
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='resume', verbose_name="用户")
+    pdf_file = models.FileField(upload_to='resumes/', verbose_name="简历文件", null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name="创建时间")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="更新时间")
+    
+    class Meta:
+        verbose_name = "简历"
+        verbose_name_plural = "简历"
+        
+    def __str__(self):
+        return f"{self.user.username}的简历"
