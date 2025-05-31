@@ -3,6 +3,7 @@ from django.core.management.base import BaseCommand
 from job_recommendation.models import JobCategory, Job
 from django.utils import timezone
 from datetime import timedelta
+from user_management.models import User
 
 class Command(BaseCommand):
     help = '填充职位数据到数据库'
@@ -27,7 +28,6 @@ class Command(BaseCommand):
         category_objects = []
         for cat in categories:
             category = JobCategory.objects.create(name=cat['name'], description=cat['description'])
-            category_objects.append(category)
             self.stdout.write(f'创建类别: {category.name}')
 
         # 创建职位

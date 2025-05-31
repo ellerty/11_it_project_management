@@ -105,6 +105,13 @@ const routes: Array<RouteRecordRaw> = [
     }
   },
   {
+    path: '/chat',
+    name: 'Chat',
+    // @ts-ignore
+    component: () => import('../modules/task_communication/views/ChatView.vue'),
+    meta: { title: '聊天 - 智慧零工', requiresAuth: true }
+  },
+  {
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     // @ts-ignore
